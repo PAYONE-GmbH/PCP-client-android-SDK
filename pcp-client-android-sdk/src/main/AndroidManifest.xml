@@ -3,9 +3,4 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
 
-    <application>
-        <activity
-            android:name=".cctokenizer.CCTokenizerActivity"
-            android:theme="@style/Theme.AppCompat.Light.NoActionBar"></activity>
-    </application>
 </manifest>
