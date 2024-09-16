@@ -4,16 +4,16 @@ Welcome to the PAYONE Commerce Platform Client Android SDK for the PAYONE Commer
 
 ## Table of Contents
 
-- [Supported Android API Version](#supported-android-version)
+- [Supported Android API Version](#supported-android-api-version)
 - [Features](#features)
 - [Installation](#installation)
 - [Usage](#usage)
   - [Creditcard Tokenizer](#creditcard-tokenizer)
     - [1. Upload an HTML page](#1-upload-an-html-page)
-    - [2. Imports for CreditCardTokenizer](#2-import-the-pcpclient-modules)
-    - [3. Create a CCTokenizerFragment instance](#3-create-the-cctokenizer-fragment)
+    - [2. Imports for CreditCardTokenizer](#2-imports-for-creditcardtokenizer)
+    - [3. Create a CCTokenizerFragment instance](#3-create-a-cctokenizerfragment-instance)
   - [Fingerprint Tokenizer](#fingerprint-tokenizer)
-    - [1. Import for Fingerprint Tokenizer](#1-import-pcpclient-modules)
+    - [1. Import for Fingerprint Tokenizer](#1-import-for-fingerprint-tokenizer)
     - [2. Create a new Fingerprint tokenizer instance](#2-create-a-new-fingerprint-tokenizer-instance)
     - [3. Get the snippet token](#3-get-the-snippet-token)
 - [Demonstration Projects](#demonstration-projects)
@@ -21,7 +21,7 @@ Welcome to the PAYONE Commerce Platform Client Android SDK for the PAYONE Commer
 - [Releasing the library](#releasing-the-library)
 - [License](#license)
 
-## Supported Android Version
+## Supported Android API Version
 
 In order to use the SDK your minimum SDK Version needs to be at least API 34.
 
