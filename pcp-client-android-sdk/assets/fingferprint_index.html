@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payla Integration</title>
+</head>
+<body>
+<div id="payla-container"></div>
+
+<script src="path_to_transpiled_js_file.js"></script>
+<script>
+    // Example usage of the PCPFingerprintingTokenizer class
+    PCPFingerprintingTokenizer.create(
+        '#payla-container',
+        'production',
+        'yourPaylaPartnerId',
+        'yourPartnerMerchantId'
+    ).then(instance => {
+        console.log('Unique ID:', instance.getUniqueId());
+        console.log('Snippet Token:', instance.getSnippetToken());
+    }).catch(error => {
+        console.error('Error initializing Payla:', error);
+    });
+</script>
+</body>
+</html>
