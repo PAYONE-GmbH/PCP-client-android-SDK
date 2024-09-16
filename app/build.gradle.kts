@@ -59,6 +59,7 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
+    implementation("androidx.appcompat:appcompat:1.6.1")
     implementation(project(":pcp-client-android-sdk"))
     implementation(libs.androidx.constraintlayout)
     testImplementation(libs.junit)
