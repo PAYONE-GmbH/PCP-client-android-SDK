@@ -300,9 +300,3 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md)
 This project is licensed under the MIT License. For more details, see the [LICENSE](./LICENSE) file.
 
 **[back to top](#table-of-contents)**
-
-
-
-
-
-
