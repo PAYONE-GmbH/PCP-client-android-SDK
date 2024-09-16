@@ -47,7 +47,7 @@ class MainActivity : AppCompatActivity() {
 
         ccTokenizerBtn.setOnClickListener {
             val fragment = CreditcardTokenizerFragment.newInstance(
-                tokenizerUrl = "https://djirlic.com/paytestapp.html",
+                tokenizerUrl = "YOUR_URL",
                 request = CCTokenizerRequest.create(
                     "YOUR_MID",
                     "YOUR_AID",
