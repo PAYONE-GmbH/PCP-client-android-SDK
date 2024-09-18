@@ -5,7 +5,8 @@ plugins {
     alias(libs.plugins.jetbrains.kotlin.android)
     alias(libs.plugins.sonar)
     kotlin("plugin.serialization") version "1.9.0"
-    id("com.vanniktech.maven.publish") version "0.29.0"
+    id("com.vanniktech.maven.publish") version "0.28.0"
+    id("com.gradleup.nmcp") version "0.0.7"
 }
 
 android {
@@ -53,36 +54,13 @@ dependencies {
     debugImplementation("androidx.fragment:fragment-testing:1.5.7")
 }
 
-mavenPublishing {
-    publishToMavenCentral(SonatypeHost.CENTRAL_PORTAL)
+nmcp {
+    publishAllPublications {
+        val keyUsername = "SONATYPE_USERNAME"
+        val keyPassword = "SONATYPE_PASSWORD"
+        username = findProperty(keyUsername)?.toString() ?: System.getenv(keyUsername)
+        password = findProperty(keyPassword)?.toString() ?: System.getenv(keyPassword)
 
-    signAllPublications()
-
-    coordinates("io.github.payone-gmbh", "pcp-client-android-sdk", "0.0.1")
-
-    pom {
-        name.set("PCP-CLIENT-SDK-ANDROID")
-        description.set("The PAYONE Client Android SDK")
-        inceptionYear.set("2024")
-        url.set("https://github.com/PAYONE-GmbH/PCP-client-android-SDK")
-        licenses {
-            license {
-                name.set("MIT License")
-                url.set("https://opensource.org/license/mit/")
-            }
-        }
-
-        developers {
-            developer {
-                name.set("Djordje Nikolic")
-                email.set("d.nikolic@NanoGiants.de")
-            }
-        }
-
-        scm {
-            url.set("https://github.com/PAYONE-GmbH/PCP-client-android-SDK")
-            connection.set("scm:git:git://github.com/PAYONE-GmbH/PCP-client-android-SDK.git")
-            developerConnection.set("scm:git:ssh://git@github.com/PAYONE-GmbH/PCP-client-android-SDK.git")
-        }
+        publicationType = "USER_MANAGED"
     }
 }
