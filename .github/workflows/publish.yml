@@ -32,10 +32,10 @@ jobs:
             ${{ runner.os }}-gradle
 
       - name: Build Android library
-        run: ./gradlew build
+        run: ./gradlew :pcp-client-android-sdk:build
 
       - name: Publish to Maven Central
-        run: ./gradlew publish
+        run: ./gradlew :pcp-client-android-sdk:publish
         env:
           ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.ORG_GRADLE_PROJECT_mavenCentralUsername }}
           ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.ORG_GRADLE_PROJECT_mavenCentralPassword }}
