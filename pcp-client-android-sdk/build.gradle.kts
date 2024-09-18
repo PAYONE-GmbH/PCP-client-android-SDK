@@ -97,3 +97,9 @@ signing {
 
     sign(publishing.publications)
 }
+
+tasks.withType<Sign> {
+    doFirst {
+        println("Signing with key: ${findProperty("signingInMemoryKey")}")
+    }
+}
