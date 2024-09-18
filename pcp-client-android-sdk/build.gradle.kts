@@ -4,6 +4,8 @@ plugins {
     alias(libs.plugins.sonar)
     kotlin("plugin.serialization") version "1.9.0"
     id("com.vanniktech.maven.publish") version "0.29.0"
+    id("maven-publish")
+    id("signing")
 }
 
 android {
@@ -51,37 +53,66 @@ dependencies {
     debugImplementation("androidx.fragment:fragment-testing:1.5.7")
 }
 
-mavenPublishing {
-    publishToMavenCentral("CENTRAL_PORTAL")
+publishing {
+    publications {
+        afterEvaluate {
+            create<MavenPublication>("mavenAndroid") {
+                from(components["release"])
 
-    signAllPublications()
+                groupId = "com.payone.pcp_client_android_sdk"
+                artifactId = "pcp-client-android-sdk"
+                version = "0.0.1"
 
-    coordinates("io.github.payone-gmbh", "pcp-client-android-sdk", "0.0.1")
+                pom {
+                    packaging = "aar"
+                    name.set("PCP Client Android SDK")
+                    description.set("Welcome to the PAYONE Commerce Platform Client Android SDK for the PAYONE Commerce Platform. This SDK provides everything a client needs to easily complete payments using Credit or Debit Card, PAYONE Buy Now Pay Later (BNPL).")
+                    url.set("https://github.com/PAYONE-GmbH/PCP-client-android-SDK")
 
-    pom {
-        name.set("PCP Client Android SDK")
-        description.set("Welcome to the PAYONE Commerce Platform Client Android SDK for the PAYONE Commerce Platform. This SDK provides everything a client needs to easily complete payments using Credit or Debit Card, PAYONE Buy Now Pay Later (BNPL).")
-        inceptionYear.set("2024")
-        url.set("https://github.com/PAYONE-GmbH/PCP-client-android-SDK")
-        licenses {
-            license {
-                name.set("MIT License")
-                url.set("https://opensource.org/license/mit/")
+                    licenses {
+                        license {
+                            name.set("MIT License")
+                            url.set("https://opensource.org/license/mit/")
+                        }
+                    }
+
+                    developers {
+                        developer {
+                            name.set("Djordje Nikolic")
+                            email.set("d.nikolic@NanoGiants.de")
+                        }
+                    }
+
+                    scm {
+                        connection.set("scm:git:https://github.com/PAYONE-GmbH/PCP-client-android-SDK.git")
+                        developerConnection.set("scm:git:https://github.com/PAYONE-GmbH/PCP-client-android-SDK.git")
+                        url.set("https://github.com/PAYONE-GmbH/PCP-client-android-SDK")
+                    }
+                }
             }
         }
-        developers {
-            developer {
-                id.set("username")
-                name.set("PAYONE-GmbH")
-                url.set("https://github.com/PAYONE-GmbH")
+    }
+
+    repositories {
+        maven {
+            name = "MavenCentral"
+            url = uri("https://oss.sonatype.org/service/local/staging/deploy/maven2/")
+            credentials {
+                username = project.findProperty("mavenCentralUsername") as String? ?: System.getenv("ORG_GRADLE_PROJECT_mavenCentralUsername")
+                password = project.findProperty("mavenCentralPassword") as String? ?: System.getenv("ORG_GRADLE_PROJECT_mavenCentralPassword")
             }
         }
+    }
+}
 
-        scm {
-            url.set("https://github.com/PAYONE-GmbH/PCP-client-android-SDK")
-            connection.set("scm:git:git://github.com/PAYONE-GmbH/PCP-client-android-SDK.git")
-            developerConnection.set("scm:git:ssh://git@github.com/PAYONE-GmbH/PCP-client-android-SDK.git")
-        }
+signing {
+    useInMemoryPgpKeys(
+        project.findProperty("signingInMemoryKeyId") as String? ?: System.getenv("ORG_GRADLE_PROJECT_signingInMemoryKeyId"),
+        project.findProperty("signingInMemoryKey") as String? ?: System.getenv("ORG_GRADLE_PROJECT_signingInMemoryKey"),
+        project.findProperty("signingInMemoryKeyPassword") as String? ?: System.getenv("ORG_GRADLE_PROJECT_signingInMemoryKeyPassword")
+    )
+    afterEvaluate {
+        sign(publishing.publications["mavenAndroid"])
     }
 }
 
