@@ -31,6 +31,12 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle
 
+      - name: Decode GPG Key
+        run: echo "${{ secrets.ORG_GRADLE_PROJECT_inMemorySigningKey }}" | base64 --decode > private-key.asc
+
+      - name: Import GPG Key
+        run: gpg --import private-key.asc
+
       - name: Build Android library
         run: ./gradlew build
 
@@ -38,7 +44,6 @@ jobs:
         run: ./gradlew publish
         env:
           ORG_GRADLE_PROJECT_signingInMemoryKeyId: ${{ secrets.ORG_GRADLE_PROJECT_signingInMemoryKeyId }}
-          ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.ORG_GRADLE_PROJECT_signingInMemoryKey }}  # GPG private key
           ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.ORG_GRADLE_PROJECT_signingInMemoryKeyPassword }}        # GPG key password
           ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.ORG_GRADLE_PROJECT_mavenCentralUsername }}            # Maven username
           ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.ORG_GRADLE_PROJECT_mavenCentralPassword }}            # Maven password
