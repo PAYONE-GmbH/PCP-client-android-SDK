@@ -21,7 +21,6 @@ jobs:
         uses: actions/setup-java@v3
         with:
           java-version: '17'
-          distribution: 'temurin'
 
       - name: Cache Gradle dependencies
         uses: actions/cache@v3
@@ -32,7 +31,7 @@ jobs:
             ${{ runner.os }}-gradle
 
       - name: Decode GPG Key
-        run: echo "${{ secrets.ORG_GRADLE_PROJECT_inMemorySigningKey }}" | base64 --decode > private-key.asc
+        run: echo "${{ secrets.ORG_GRADLE_PROJECT_signingInMemoryKey }}" | base64 --decode > private-key.asc
 
       - name: Import GPG Key
         run: gpg --import private-key.asc
