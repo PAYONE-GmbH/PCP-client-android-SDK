@@ -5,7 +5,6 @@ plugins {
     alias(libs.plugins.jetbrains.kotlin.android)
     alias(libs.plugins.sonar)
     kotlin("plugin.serialization") version "1.9.0"
-    id("signing")
     id("com.vanniktech.maven.publish") version "0.29.0"
 }
 
