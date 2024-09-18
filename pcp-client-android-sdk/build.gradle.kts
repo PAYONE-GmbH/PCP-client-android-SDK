@@ -90,6 +90,7 @@ mavenPublishing {
 
 signing {
     useInMemoryPgpKeys(
+        findProperty("signingInMemoryKeyId") as String?,
         findProperty("signingInMemoryKey") as String?,
         findProperty("signingKeyPassword") as String?
     )
