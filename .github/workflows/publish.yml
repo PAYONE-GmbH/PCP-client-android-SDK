@@ -31,13 +31,6 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle
 
-      - name: Decode GPG Key
-        run: echo "${{ secrets.ORG_GRADLE_PROJECT_signingInMemoryKey }}" | base64 --decode > private-key.asc
-
-      - name: Import GPG Key
-        run: |
-          gpg --import --batch --yes private-key.asc
-
       - name: Build Android library
         run: ./gradlew build
 
