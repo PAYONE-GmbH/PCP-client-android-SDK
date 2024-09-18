@@ -87,19 +87,3 @@ mavenPublishing {
         }
     }
 }
-
-signing {
-    useInMemoryPgpKeys(
-        findProperty("signingInMemoryKeyId") as String?,
-        findProperty("signingInMemoryKey") as String?,
-        findProperty("signingKeyPassword") as String?
-    )
-
-    sign(publishing.publications)
-}
-
-tasks.withType<Sign> {
-    doFirst {
-        println("Signing with key: ${findProperty("signingInMemoryKey")}")
-    }
-}
