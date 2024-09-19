@@ -54,13 +54,37 @@ dependencies {
     debugImplementation("androidx.fragment:fragment-testing:1.5.7")
 }
 
-nmcp {
-    publishAllPublications {
-        val keyUsername = "SONATYPE_USERNAME"
-        val keyPassword = "SONATYPE_PASSWORD"
-        username = findProperty(keyUsername)?.toString() ?: System.getenv(keyUsername)
-        password = findProperty(keyPassword)?.toString() ?: System.getenv(keyPassword)
+mavenPublishing {
+    publishToMavenCentral(SonatypeHost.CENTRAL_PORTAL)
 
-        publicationType = "USER_MANAGED"
+    signAllPublications()
+
+    coordinates("io.github.payone-gmbh", "pcp-client-android-sdk", "0.0.1")
+
+    pom {
+        name.set("PCP-CLIENT-SDK-ANDROID")
+        description.set("The PAYONE Client Android SDK")
+        inceptionYear.set("2024")
+        url.set("https://github.com/PAYONE-GmbH/PCP-client-android-SDK")
+        licenses {
+            license {
+                name.set("MIT License")
+                url.set("https://opensource.org/license/mit/")
+            }
+        }
+
+        developers {
+            developer {
+                name.set("PAYONE Intergrations")
+                email.set("integrations@payone.com")
+                url.set("https://github.com/PAYONE-GmbH/")
+            }
+        }
+
+        scm {
+            url.set("https://github.com/PAYONE-GmbH/PCP-client-android-SDK")
+            connection.set("scm:git:git://github.com/PAYONE-GmbH/PCP-client-android-SDK.git")
+            developerConnection.set("scm:git:ssh://git@github.com/PAYONE-GmbH/PCP-client-android-SDK.git")
+        }
     }
 }
