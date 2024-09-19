@@ -35,7 +35,7 @@ jobs:
         run: ./gradlew :pcp-client-android-sdk:build
 
       - name: Publish to Maven Central
-        run: ./gradlew :pcp-client-android-sdk:publishAndReleaseToMavenCentral 
+        run: ./gradlew :pcp-client-android-sdk:publishAllPublicationsToCentralPortal 
         env:
           ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.ORG_GRADLE_PROJECT_signingInMemoryKey }}
           ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.ORG_GRADLE_PROJECT_signingInMemoryKeyPassword }}
