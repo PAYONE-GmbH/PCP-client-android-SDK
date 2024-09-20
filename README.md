@@ -1,4 +1,8 @@
 # PCPClient SDK Android
+https://img.shields.io/maven-central/v/io.github.payone-gmbh/pcp-client-android-sdk
+
+[![Maven Central Repository](https://img.shields.io/maven-central/v/io.github.payone-gmbh/pcp-client-android-sdk)](https://img.shields.io/maven-central/v/io.github.payone-gmbh/pcp-client-android-sdk)
+[![GitHub License](https://img.shields.io/github/license/PAYONE-GmbH/PCP-client-android-SDK)](https://github.com/PAYONE-GmbH/PCP-client-android-SDK/blob/main/LICENSE)
 
 Welcome to the PAYONE Commerce Platform Client Android SDK for the PAYONE Commerce Platform. This SDK provides everything a client needs to easily complete payments using Credit or Debit Card, PAYONE Buy Now Pay Later (BNPL).
 
