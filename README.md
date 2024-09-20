@@ -33,8 +33,12 @@ In order to use the SDK your minimum SDK Version needs to be at least API 34.
 ## Installation
 
 ```kotlin
-
+dependencies {
+    implementation("io.github.payone-gmbh:pcp-client-android-sdk:1.0.0")
+}
 ```
+
+**[back to top](#table-of-contents)**
 
 ## Usage
 
@@ -211,7 +215,7 @@ Defines the various input fields for credit card details.
 | `success`          | `(CCTokenizerResponse) -> Unit` | Callback function for credit card check success.                                                                                                     |
 | `error`          | `(CCTokenizerError) -> Unit`  | Callback function for credit card check failure.                                                                                                     |
 
-**[back to top](#table-of-contents)**
+ 
 
 ### Fingerprint Tokenizer
 
