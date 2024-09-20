@@ -5,8 +5,7 @@ plugins {
     alias(libs.plugins.jetbrains.kotlin.android)
     alias(libs.plugins.sonar)
     kotlin("plugin.serialization") version "1.9.0"
-    id("com.vanniktech.maven.publish") version "0.28.0"
-    id("com.gradleup.nmcp") version "0.0.7"
+    alias(libs.plugins.maven.publish)
 }
 
 android {
@@ -59,7 +58,7 @@ mavenPublishing {
 
     signAllPublications()
 
-    coordinates("io.github.payone-gmbh", "pcp-client-android-sdk", "0.0.1")
+    coordinates("io.github.payone-gmbh", "pcp-client-android-sdk", "1.0.0")
 
     pom {
         name.set("PCP-CLIENT-SDK-ANDROID")
