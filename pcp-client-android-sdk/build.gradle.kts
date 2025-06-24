@@ -10,7 +10,7 @@ plugins {
 
 android {
     namespace = "com.payone.pcp_client_android_sdk"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         minSdk = 24

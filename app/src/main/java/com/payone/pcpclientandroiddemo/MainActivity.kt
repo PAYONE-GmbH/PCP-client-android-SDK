@@ -1,10 +1,28 @@
 package com.payone.pcpclientandroiddemo
 
+import android.app.Activity
+import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import android.widget.Button
 import android.widget.TextView
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.ComposeView
+import com.google.android.gms.wallet.AutoResolveHelper
+import com.google.android.gms.wallet.PaymentsClient
+import com.google.android.gms.wallet.Wallet
+import com.google.android.gms.wallet.WalletConstants
+import com.google.android.gms.wallet.PaymentDataRequest
+import com.google.pay.button.ButtonTheme
+import com.google.pay.button.ButtonType
+import com.google.pay.button.PayButton
 import com.payone.pcp_client_android_sdk.cctokenizer.CCTokenizerRequest
 import com.payone.pcp_client_android_sdk.cctokenizer.CreditcardTokenizerConfig
 import com.payone.pcp_client_android_sdk.cctokenizer.CreditcardTokenizerFragment
@@ -13,8 +31,11 @@ import com.payone.pcp_client_android_sdk.cctokenizer.PayoneLanguage
 import com.payone.pcp_client_android_sdk.cctokenizer.SupportedCardType
 import com.payone.pcp_client_android_sdk.fingerprinttokenizer.FingerprintTokenizer
 import com.payone.pcp_client_android_sdk.utils.PCPEnvironment
+import com.payone.pcpclientandroiddemo.gpay.GooglePayRequestJson
 
 class MainActivity : AppCompatActivity() {
+    private lateinit var paymentsClient: PaymentsClient
+    private val LOAD_PAYMENT_DATA_REQUEST_CODE = 991
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -118,6 +139,78 @@ class MainActivity : AppCompatActivity() {
                 .commit()
         }
 
+        // Set up Google Pay PaymentsClient
+        paymentsClient = Wallet.getPaymentsClient(
+            this,
+            Wallet.WalletOptions.Builder()
+                .setEnvironment(WalletConstants.ENVIRONMENT_TEST)
+                .build()
+        )
 
+        val composeView = findViewById<ComposeView>(R.id.compose_google_pay)
+        composeView.setContent {
+            val startPayment = remember { mutableStateOf(false) }
+            if (startPayment.value) {
+                startPayment.value = false
+                launchGooglePay()
+            }
+            GooglePayButton(onClick = { startPayment.value = true })
+        }
+    }
+
+    private fun launchGooglePay() {
+        val paymentDataRequestJson = GooglePayRequestJson.getRequestJson(
+            merchantId = "your-merchant-id",
+            merchantName = "Your Merchant Name",
+            totalPrice = "100.00"
+        )
+        val request = com.google.android.gms.wallet.PaymentDataRequest.fromJson(paymentDataRequestJson)
+        if (request != null) {
+            AutoResolveHelper.resolveTask(
+                paymentsClient.loadPaymentData(request),
+                this,
+                LOAD_PAYMENT_DATA_REQUEST_CODE
+            )
+        }
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == LOAD_PAYMENT_DATA_REQUEST_CODE) {
+            when (resultCode) {
+                Activity.RESULT_OK -> {
+                    // Handle successful payment here
+                    val paymentData = data?.let { com.google.android.gms.wallet.PaymentData.getFromIntent(it) }
+                    if (paymentData != null) {
+                    // TODO: process paymentData
+                        Log.d("GooglePay", "Payment processed: ${paymentData.toJson()}")
+                    } else {
+                        Log.d("GooglePay", "Payment processed but paymentData is null")
+                    }
+                }
+                Activity.RESULT_CANCELED -> {
+                    // Payment canceled
+                    Log.d("GooglePay", "Payment canceled by user")
+                }
+                AutoResolveHelper.RESULT_ERROR -> {
+                    // Handle error
+                    val status = AutoResolveHelper.getStatusFromIntent(data)
+                    Log.e("GooglePay", "Payment error: ${status?.statusMessage}")
+                }
+            }
+        }
+    }
+}
+
+// Composable for Google Pay Button
+@Composable
+fun GooglePayButton(onClick: () -> Unit) {
+    val allowedPaymentMethods = GooglePayRequestJson.allowedPaymentMethods
+    Box(modifier = Modifier.fillMaxWidth()) {
+        PayButton(
+            onClick = onClick,
+            allowedPaymentMethods = allowedPaymentMethods,
+            theme = ButtonTheme.Dark
+        )
     }
 }
