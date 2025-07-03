@@ -1,6 +1,7 @@
 [versions]
 agp = "8.4.2"
-kotlin = "2.1.0"
+kotlin = "2.2.0"
+compose-plugin = "1.8.2"
 coreKtx = "1.13.1"
 junit = "4.13.2"
 junitVersion = "1.2.1"
@@ -50,3 +51,6 @@ jetbrains-kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = 
 android-library = { id = "com.android.library", version.ref = "agp" }
 sonar = { id = "org.sonarqube", version.ref = "sonarqube" }
 maven-publish = { id = "com.vanniktech.maven.publish", version.ref = "vanniktech" }
+jetbrainsCompose = { id = "org.jetbrains.compose", version.ref = "compose-plugin" }
+kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
+compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
