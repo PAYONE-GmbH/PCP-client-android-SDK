@@ -4,13 +4,13 @@ plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.jetbrains.kotlin.android)
     alias(libs.plugins.sonar)
-    kotlin("plugin.serialization") version "1.9.0"
+    kotlin("plugin.serialization") version "2.1.0"
     alias(libs.plugins.maven.publish)
 }
 
 android {
     namespace = "com.payone.pcp_client_android_sdk"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         minSdk = 24
@@ -58,7 +58,7 @@ mavenPublishing {
 
     signAllPublications()
 
-    coordinates("io.github.payone-gmbh", "pcp-client-android-sdk", "1.0.0")
+    coordinates("io.github.payone-gmbh", "pcp-client-android-sdk", "1.1.0")
 
     pom {
         name.set("PCP-CLIENT-SDK-ANDROID")
