@@ -152,7 +152,7 @@ If you want to use the example app and host the HTML file locally over HTTP, you
 <network-security-config>
     <domain-config cleartextTrafficPermitted="true">
         <domain includeSubdomains="true">10.0.2.2</domain> <!-- Emulator -->
-        <domain includeSubdomains="true">YOUR_LOCAL_IP</domain> <!-- Physical device -->
+        <domain includeSubdomains="true">LOCAL_IP</domain> <!-- Your computer's local IP -->
     </domain-config>
 </network-security-config>
 ```
@@ -416,7 +416,7 @@ You can find a demonstration project for each language including all features in
 - **Android**: Check out the [PCPClientAndroidDemo](./app) folder.
 
 > [!IMPORTANT]
-> Be aware that you will need to provide your own properties, for example AID, MID, PortalKey at all places which are prefixed with "YOUR\_".
+> Be aware that you will need to provide your own properties, for example AID, MID, PortalKey at all places which are prefixed with "YOUR_".
 
 ## Contributing
 
