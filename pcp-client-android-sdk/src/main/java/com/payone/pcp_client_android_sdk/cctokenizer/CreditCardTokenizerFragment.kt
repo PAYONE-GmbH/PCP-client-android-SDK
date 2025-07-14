@@ -146,7 +146,7 @@ class CreditcardTokenizerFragment : Fragment() {
                 "integrity" to "sha384-Ec6OPQvn8poHUzTwcUYWC/pwd5wgVuVB+jKl+Eml5MWou154pm6j2MdhhJb9uqML"
             ),
             "live" to mapOf(
-                "src" to "https://sdk.tokenization.secure.payone.com/1.0.1/hosted-tokenization-sdk",
+                "src" to "https://sdk.tokenization.secure.payone.com/1.0.1/hosted-tokenization-sdk.js",
                 "integrity" to "sha384-Ec6OPQvn8poHUzTwcUYWC/pwd5wgVuVB+jKl+Eml5MWou154pm6j2MdhhJb9uqML"
             )
         )
