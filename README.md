@@ -50,7 +50,7 @@ In order to use the SDK your minimum SDK Version needs to be at least API 34.
 
 ```kotlin
 dependencies {
-    implementation("io.github.payone-gmbh:pcp-client-android-sdk:1.1.0")
+    implementation("io.github.payone-gmbh:pcp-client-android-sdk:1.2.0")
 }
 ```
 
@@ -428,6 +428,11 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md)
 
 - Checkout develop branch.
 - Do the required changes.
+- Use the version script to update to new version, e.g:
+  ```sh
+  # from the root folder
+  sh version.sh 1.2.3
+  ```
 - Create a pull-request into main branch.
 - After merging the develop branch create a Git tag with the version.
 
