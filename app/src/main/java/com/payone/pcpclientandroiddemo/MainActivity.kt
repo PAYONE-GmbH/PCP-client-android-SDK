@@ -16,12 +16,11 @@ import com.google.android.gms.wallet.PaymentsClient
 import com.google.android.gms.wallet.Wallet
 import com.google.android.gms.wallet.WalletConstants
 import com.google.android.gms.wallet.PaymentDataRequest
-import com.payone.pcp_client_android_sdk.cctokenizer.CCTokenizerRequest
 import com.payone.pcp_client_android_sdk.cctokenizer.CreditcardTokenizerConfig
 import com.payone.pcp_client_android_sdk.cctokenizer.CreditcardTokenizerFragment
-import com.payone.pcp_client_android_sdk.cctokenizer.Field
-import com.payone.pcp_client_android_sdk.cctokenizer.PayoneLanguage
-import com.payone.pcp_client_android_sdk.cctokenizer.SupportedCardType
+import com.payone.pcp_client_android_sdk.cctokenizer.IframeConfig
+import com.payone.pcp_client_android_sdk.cctokenizer.SubmitButtonConfig
+import com.payone.pcp_client_android_sdk.cctokenizer.UIConfig
 import com.payone.pcp_client_android_sdk.fingerprinttokenizer.FingerprintTokenizer
 import com.payone.pcp_client_android_sdk.utils.PCPEnvironment
 import com.payone.pcpclientandroiddemo.gpay.GooglePayRequestJson
@@ -60,73 +59,48 @@ class MainActivity : AppCompatActivity() {
         }
 
         ccTokenizerBtn.setOnClickListener {
+            // Example UI config for the new SDK
+            val uiConfig = UIConfig(
+                formBgColor = "#64bbb7",
+                fieldBgColor = "wheat",
+                fieldBorder = "1px solid #b33cd8",
+                fieldOutline = "#101010 solid 5px",
+                fieldLabelColor = "#d3d83c",
+                fieldPlaceholderColor = "blue",
+                fieldTextColor = "crimson",
+                fieldErrorCodeColor = "green"
+            )
+            val config = CreditcardTokenizerConfig(
+                iframe = IframeConfig(
+                    iframeWrapperId = "payment-IFrame",
+                    height = 400,
+                    width = 400
+                ),
+                uiConfig = uiConfig,
+                locale = "de_DE",
+                submitButton = SubmitButtonConfig(
+                    selector = "#submit",
+                    element = null
+                ),
+                environment = "test",
+                tokenizationSuccessCallback = { statusCode, token, cardDetails ->
+                    Log.d("CC Success", "Tokenized card successfully")
+                    Log.d("CC Success", "Status: $statusCode")
+                    Log.d("CC Success", "Token: $token")
+                    Log.d("CC Success", "Card Details: $cardDetails")
+                },
+                tokenizationFailureCallback = { statusCode, errorResponse ->
+                    Log.e("CC Failure", "Tokenization of card failed")
+                    Log.e("CC Failure", "Status: $statusCode")
+                    Log.e("CC Failure", "Error: ${errorResponse["error"]}")
+                }
+            )
+            val jwtToken = "<Token to be retrieved from the CommercePlatform-API>" // Fetch this from your backend
+            var tokenizerHtmlUrl = "https://path-to-your-server/creditcard-tokenizer.html" // Use your hosted HTML page URL
             val fragment = CreditcardTokenizerFragment.newInstance(
-                tokenizerUrl = "YOUR_URL",
-                request = CCTokenizerRequest.create(
-                    "YOUR_MID",
-                    "YOUR_AID",
-                    "YOUR_PORTAL_ID",
-                    PCPEnvironment.Test,
-                    "YOUR_PMI_PORTAL_KEY"
-                ),
-                supportedCardTypes = listOf(
-                    SupportedCardType.Visa.identifier,
-                    SupportedCardType.Mastercard.identifier
-                ),
-                config = CreditcardTokenizerConfig(
-                    cardPan = Field(
-                        selector = "cardpan",
-                        style = "font-size: 14px; border: 1px solid #000;",
-                        type = "input",
-                        size = null,
-                        maxlength = null,
-                        length = null,
-                        iframe = null
-                    ),
-                    cardCvc2 = Field(
-                        selector = "cardcvc2",
-                        style = "font-size: 14px; border: 1px solid #000;",
-                        type = "password",
-                        size = "4",
-                        maxlength = "4",
-                        length = mapOf("V" to 3, "M" to 3),
-                        iframe = null
-                    ),
-                    cardExpireMonth = Field(
-                        selector = "cardexpiremonth",
-                        style = "font-size: 14px; width: 30px; border: solid 1px #000; height: 22px;",
-                        type = "text",
-                        size = "2",
-                        maxlength = "2",
-                        length = null,
-                        iframe = "width" to "40px"
-                    ),
-                    cardExpireYear = Field(
-                        selector = "cardexpireyear",
-                        style = null,
-                        type = "text",
-                        size = null,
-                        maxlength = null,
-                        length = null,
-                        iframe = "width" to "50px"
-                    ),
-                    defaultStyles = mapOf(
-                        "input" to "font-size: 1em; border: 1px solid #000; width: 175px;",
-                        "select" to "font-size: 1em; border: 1px solid #000;",
-                        "iframe" to "height: 22px; width: 180px"
-                    ),
-                    language = PayoneLanguage.German,
-                    error = "error",
-                    submitButtonId = "submit",
-                    creditCardCheckCallback = { result ->
-                        if (result.isSuccess) {
-                            // get response as CCTokenizerResponse
-                            val response = result.getOrNull()
-                        } else if (result.isFailure) {
-                            val error = result.exceptionOrNull()
-                        }
-                    }
-                )
+                config,
+                jwtToken,
+                tokenizerHtmlUrl
             )
             supportFragmentManager.beginTransaction().replace(R.id.fragment_container, fragment)
                 .commit()
