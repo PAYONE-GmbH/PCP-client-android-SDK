@@ -1,4 +1,5 @@
 # PCPClient SDK Android
+
 https://img.shields.io/maven-central/v/io.github.payone-gmbh/pcp-client-android-sdk
 
 [![Maven Central Repository](https://img.shields.io/maven-central/v/io.github.payone-gmbh/pcp-client-android-sdk)](https://img.shields.io/maven-central/v/io.github.payone-gmbh/pcp-client-android-sdk)
@@ -13,9 +14,15 @@ Welcome to the PAYONE Commerce Platform Client Android SDK for the PAYONE Commer
 - [Installation](#installation)
 - [Usage](#usage)
   - [Creditcard Tokenizer](#creditcard-tokenizer)
-    - [1. Upload an HTML page](#1-upload-an-html-page)
+    - [1. Add the HTML page](#1-add-the-html-page)
     - [2. Imports for CreditCardTokenizer](#2-imports-for-creditcardtokenizer)
-    - [3. Create a CCTokenizerFragment instance](#3-create-a-cctokenizerfragment-instance)
+    - [3. Configure the Tokenizer](#3-configure-the-tokenizer)
+    - [4. Fetch the JWT Token from your Backend](#4-fetch-the-jwt-token-from-your-backend)
+    - [5. Host and load the HTML page](#5-host-and-load-the-html-page)
+    - [6. Initialize the Tokenizer](#6-initialize-the-tokenizer)
+    - [7. Customization and Callbacks](#7-customization-and-callbacks)
+    - [8. PCI DSS & Security](#8-pci-dss--security)
+    - [9. Migration Note](#9-migration-note)
   - [Fingerprint Tokenizer](#fingerprint-tokenizer)
     - [1. Import for Fingerprint Tokenizer](#1-import-for-fingerprint-tokenizer)
     - [2. Create a new Fingerprint tokenizer instance](#2-create-a-new-fingerprint-tokenizer-instance)
@@ -43,7 +50,7 @@ In order to use the SDK your minimum SDK Version needs to be at least API 34.
 
 ```kotlin
 dependencies {
-    implementation("io.github.payone-gmbh:pcp-client-android-sdk:1.1.0")
+    implementation("io.github.payone-gmbh:pcp-client-android-sdk:1.2.0")
 }
 ```
 
@@ -53,178 +60,164 @@ dependencies {
 
 ### Creditcard Tokenizer
 
-The Credit Card Tokenizer is an essential component for handling payments on the PAYONE Commerce Platform. It securely collects and processes credit or debit card information to generate a `paymentProcessingToken`, which is required for the Server-SDK to complete the payment process. Without this token, the server cannot perform the transaction. The tokenizer ensures that sensitive card details are handled securely and is PCI DSS (Payment Card Industry Data Security Standard) compliant.
+The Credit Card Tokenizer now uses the new PAYONE Hosted Tokenization SDK. It securely collects and processes credit or debit card information in a PCI DSS-compliant way, returning a token for use in your server-side payment process.
 
-To integrate the Creditcard Tokenizer feature into your application, follow these steps:
+To integrate the Credit Card Tokenizer feature into your Android application, follow these steps:
 
-#### 1. Upload an HTML page
+#### 1. Add the HTML page
 
-The Creditcard tokenizer injects code and PCI DSS conform input fields into a webpage. To assure this process works, you need to setup the correct containers and submit button.
+Host your HTML page locally (for development) or on a server. The page must contain the payment IFrame and submit button:
 
 ```html
-  <div id="cardpanInput"></div>
-  <div id="cardcvc2Input"></div>
-  <div id="cardExpireMonthInput"></div>
-  <div id="cardExpireYearInput"></div>
-  <button id="submit">Submit</button>
-  ```
+<div id="payment-IFrame"></div> <button id="submit">Submit</button>
+```
 
-For a more sophisticated example, see this [creditcard-tokenizer-example.html](./creditcard-tokenizer-example.html).
+For a more sophisticated example, see [creditcard-tokenizer-example.html](./app/src/main/assets/creditcard-tokenizer-example.html).
 
 #### 2. Imports for CreditCardTokenizer
 
-**Kotlin**
 ```kotlin
-import com.payone.pcp_client_android_sdk.cctokenizer.CCTokenizerFragment
-import com.payone.pcp_client_android_sdk.utils.PCPEnvironment
+import com.payone.pcp_client_android_sdk.cctokenizer.CreditcardTokenizerFragment
+import com.payone.pcp_client_android_sdk.cctokenizer.CreditcardTokenizerConfig
+import com.payone.pcp_client_android_sdk.cctokenizer.IframeConfig
+import com.payone.pcp_client_android_sdk.cctokenizer.UIConfig
+import com.payone.pcp_client_android_sdk.cctokenizer.SubmitButtonConfig
 ```
 
-#### 3. Create a CCTokenizerFragment instance
-
-##### Kotlin
-
-Use the `CCTokenizerFragment.newInstance()` method.
+#### 3. Configure the Tokenizer
 
 ```kotlin
-CCTokenizerFragment.newInstance(
-  tokenizerUrl: String,
-  request: CCTokenizerRequest,
-  supportedCardTypes: List<String>,
-  config: CreditcardTokenizerConfig
+val uiConfig = UIConfig(
+    formBgColor = "#64bbb7",
+    fieldBgColor = "wheat",
+    fieldBorder = "1px solid #b33cd8",
+    fieldOutline = "#101010 solid 5px",
+    fieldLabelColor = "#d3d83c",
+    fieldPlaceholderColor = "blue",
+    fieldTextColor = "crimson",
+    fieldErrorCodeColor = "green"
+)
+
+val config = CreditcardTokenizerConfig(
+    iframe = IframeConfig(
+        iframeWrapperId = "payment-IFrame",
+        height = 400,
+        width = 400
+    ),
+    uiConfig = uiConfig,
+    locale = "de_DE",
+    submitButton = SubmitButtonConfig(
+        selector = "#submit",
+        element = null
+    ),
+    environment = "test", // Use "live" for production
+    tokenizationSuccessCallback = { statusCode, token, cardDetails ->
+        Log.d("CC Success", "Tokenized card successfully")
+        Log.d("CC Success", "Status: $statusCode")
+        Log.d("CC Success", "Token: $token")
+        Log.d("CC Success", "Card Details: $cardDetails")
+    },
+    tokenizationFailureCallback = { statusCode, errorResponse ->
+        Log.e("CC Failure", "Tokenization of card failed")
+        Log.e("CC Failure", "Status: $statusCode")
+        Log.e("CC Failure", "Error: ${errorResponse["error"]}")
+    }
 )
 ```
 
-##### Tokenizer URL
+#### 4. Fetch the JWT Token from your Backend
 
-This is the URL where your HTML code can be found and this should include a valid HTML with the later specified fields and submit button.
-
-<details>
-  <summary>Example:</summary>
+You must fetch the JWT from your backend before initializing the SDK.
 
 ```kotlin
-tokenizerUrl = "https://github.com"
+val jwtToken = fetchJwtTokenFromBackend() // Implement this in your backend
 ```
-</details>
 
-> [!CAUTION]  
-> Do not use local HTML since this won't work. The scripts that are used need a valid origin to send updates to, Therefore, it's currently a limitation that the HTML must be hosted.
+#### 5. Host and load the HTML page
 
-##### Request
+For local development, host your HTML file using a local server (e.g. `http-server` or similar). Use your computer's IP address or emulator's special address:
 
-The `CCTokenizerRequest` object includes several configuration keys and settings. These are your AID, MID, Portal ID, PMI Portal Key and lastly the environment to run your code against (test or production).
+- Emulator: `http://10.0.2.2:8080/creditcard-tokenizer-example.html`
+- Physical device: `http://<your-computer-ip>:8080/creditcard-tokenizer-example.html`
 
-<details>
-  <summary>Example:</summary>
-  
+##### ⚠️ Local Development: Allowing HTTP traffic with network_security_config.xml
+
+If you want to use the example app and host the HTML file locally over HTTP, you need to allow cleartext (HTTP) traffic in your Android app. This is only recommended for development and testing.
+
+1. **Create network_security_config.xml**
+   - Place the following file in `app/src/main/res/xml/network_security_config.xml`:
+
+```xml
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">10.0.2.2</domain> <!-- Emulator -->
+        <domain includeSubdomains="true">LOCAL_IP</domain> <!-- Your computer's local IP -->
+    </domain-config>
+</network-security-config>
+```
+
+2. **Reference it in your AndroidManifest.xml**
+   - Add the attribute:
+
+```xml
+android:networkSecurityConfig="@xml/network_security_config"
+```
+
+- Example:
+
+```xml
+<application
+    ...
+    android:networkSecurityConfig="@xml/network_security_config"
+    ...>
+    ...
+</application>
+```
+
+3. **Host your HTML file locally**
+
+   - Use a local server (e.g. `npx http-server`, `python3 -m http.server`, etc.)
+   - For emulator: access via `http://10.0.2.2:8080/creditcard-tokenizer-example.html`
+   - For physical device: use your computer's local IP, e.g. `http://192.168.1.100:8080/creditcard-tokenizer-example.html`
+
+4. **Important: Remove network_security_config.xml for production**
+   - Only use this config for development. In production, always use HTTPS and remove the `network_security_config.xml` reference from your manifest.
+
+#### 6. Initialize the Tokenizer
+
 ```kotlin
-CCTokenizerRequest(
-  mid: "123",
-  aid: "456",
-  portalId: "789",
-  environment: PCPEnvironment,
-  pmiPortalKey: "a1b2"
+val fragment = CreditcardTokenizerFragment.newInstance(
+    config,
+    jwtToken,
+    "https://<your-server-address>/creditcard-tokenizer-example.html" // Use your actual server address
 )
+supportFragmentManager.beginTransaction().replace(R.id.fragment_container, fragment)
+    .commit()
 ```
-</details>
 
-##### Supported Card Types
+#### 7. Customization and Callbacks
 
-A `List<String>` of supported card types. You should use the `SupportedCardType` enum and it's identifier property to receive valid values.
+- `iframe`: Configure the container and size for the payment iframe.
+- `uiConfig`: Customize the look and feel of the form fields.
+- `locale`: Set the language/locale for the form.
+- `submitButton`: Provide a selector or element for the submit button.
+- `tokenizationSuccessCallback`: Handle the token and card details on success.
+- `tokenizationFailureCallback`: Handle errors on failure.
+- `environment`: Choose "test" or "live" for the SDK environment.
 
-<details>
-  <summary>Example:</summary>
+#### 8. PCI DSS & Security
 
-```kotlin
-listOf(SupportedCardType.Visa.identifier, SupportedCardType.Mastercard.identifier)
-```
-</details>
+- The SDK uses a JWT from your backend for secure initialization.
+- All card data is handled inside the iframe and never touches your application code.
 
-##### Config
+#### 9. Migration Note
 
-The config including the different required [fields](#fields), the callback(s), certain CSS styles, submit button ID, and the used language.
+If you previously used the classic PAYONE Hosted IFrames, update your integration to use the new Hosted Tokenization SDK as shown above. The old `fields`, `defaultStyle`, and related config are no longer used.
 
-<details>
-  <summary>Example:</summary>
-  
-```kotlin
-data class CreditcardTokenizerConfig(
-    val cardPan: Field,
-    val cardCvc2: Field,
-    val cardExpireMonth: Field,
-    val cardExpireYear: Field,
-    val defaultStyles: Map<String, String>,
-    val language: PayoneLanguage,
-    val error: String,
-    val submitButtonId: String,
-    val creditCardCheckCallback: (Result<CCTokenizerResponse>) -> Unit
-) : Serializable
+**For more details, see the [demo project](./app) folder.**
 
-data class Field(
-    val selector: String,
-    val style: String?,
-    val type: String,
-    val size: String?,
-    val maxlength: String?,
-    val length: Map<String, Int>,
-    val iframe: Pair<String, String>
-)
-
-enum class PayoneLanguage(val configValue: String) {
-    English("Payone.ClientApi.Language.en"),
-    German("Payone.ClientApi.Language.de")
-}
-```
-</details>
-
-##### Fields
-
-Defines the various input fields for credit card details.
-
-| Property          | Type                             | Description                                        |
-| ----------------- | -------------------------------- | -------------------------------------------------- |
-| `cardpan`         | `Field`                    | Configuration for the card number field.           |
-| `cardcvc2`        | `Field`                    | Configuration for the card CVC2 field.             |
-| `cardexpiremonth` | `Field`                    | Configuration for the card expiration month field. |
-| `cardexpireyear`  | `Field`                    | Configuration for the card expiration year field.  |
-
-##### Field properties
-
-- **selector**: `String`  
-  The CSS selector for the input element.
-
-- **element**: `String` (optional)  
-  The actual DOM element if not using a selector.
-
-- **size**: `String` (optional)  
-  The size attribute for the input element.
-
-- **maxlength**: `String` (optional)  
-  The maximum length of input allowed.
-
-- **length**: `Map<String, Int>` 
-  Specifies the length for various card types (e.g., `mapOf(V to 3, M to 3, A to 4, J to 0 )`).
-
-- **type**: `String`  
-  The type attribute for the input element (e.g., `text`, `password`).
-
-- **style**: `String` (optional)  
-  CSS styles applied to the input element.
-
-- **iframe**: `Pair<String: String>` 
-  Dimensions for the iframe if used (pass only width and height properties).
-
-##### Other configurations fields
-
-| Property                           | Type                                                                                                                                                       | Description                                                                                                                                            |
-| ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `language`                         | `PayoneLanguage`                                                                                                                                                   | The language for the SDK (`.German` or `.English` for now).                                                                                                               |
-| `submitButtonId`                     | `String`                                                                                                                                       | HTML ID of the  submit button.                                                                                                                 
-| `error`                            | `String`                                                                                                                                        | HTML ID of the div-container where error messages should be displayed.                                                                                |
-| `creditCardCheckCallback`          | `Result<CCTokenizerResponse>) -> Unit`  | Callback function for credit card check responses                                                                                                       |
-| `success`          | `(CCTokenizerResponse) -> Unit` | Callback function for credit card check success.                                                                                                     |
-| `error`          | `(CCTokenizerError) -> Unit`  | Callback function for credit card check failure.                                                                                                     |
-
- 
+**[back to top](#table-of-contents)**
 
 ### Fingerprint Tokenizer
 
@@ -235,6 +228,7 @@ To integrate the Fingerprint Tokenizer feature into your application, follow the
 #### 1. Import for Fingerprint Tokenizer
 
 **Kotlin**
+
 ```kotlin
 import com.payone.pcp_client_android_sdk.fingerprinttokenizer.FingerprintTokenizer
 ```
@@ -254,8 +248,8 @@ val fingerprintTokenizer = FingerprintTokenizer(
   environment = PCPEnvironment.Test
 )
 ```
-</details>
 
+</details>
 
 #### 3. Get the snippet token
 
@@ -275,13 +269,12 @@ fingerprintTokenizer.getSnippetToken {
   }
 }
 ```
+
 </details>
 
 This snippet token is automatically generated when the `FingerprintTokenizer` instance is created and is also stored by Payla for payment verification. You need to send this snippet token to your server so that it can be included in the payment request. Add the token to the property `paymentMethodSpecificInput.customerDevice.deviceToken`.
 
-
 For further information see: https://docs.payone.com/pcp/commerce-platform-payment-methods/payone-bnpl/payone-secured-invoice
-
 
 ### Google Pay Integration
 
@@ -414,7 +407,6 @@ fun GooglePayButton(onClick: () -> Unit) {
 
 > **Note:** Replace `your-merchant-id` and `Your Merchant Name` with your actual merchant details. Make sure your layout contains a `ComposeView` with the ID `compose_google_pay`.
 
-
 **[back to top](#table-of-contents)**
 
 ## Demonstration Projects
@@ -424,7 +416,7 @@ You can find a demonstration project for each language including all features in
 - **Android**: Check out the [PCPClientAndroidDemo](./app) folder.
 
 > [!IMPORTANT]
->Be aware that you will need to provide your own properties, for example AID, MID, PortalKey at all places which are prefixed with "YOUR_".
+> Be aware that you will need to provide your own properties, for example AID, MID, PortalKey at all places which are prefixed with "YOUR_".
 
 ## Contributing
 
@@ -436,6 +428,11 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md)
 
 - Checkout develop branch.
 - Do the required changes.
+- Use the version script to update to new version, e.g:
+  ```sh
+  # from the root folder
+  sh version.sh 1.2.3
+  ```
 - Create a pull-request into main branch.
 - After merging the develop branch create a Git tag with the version.
 

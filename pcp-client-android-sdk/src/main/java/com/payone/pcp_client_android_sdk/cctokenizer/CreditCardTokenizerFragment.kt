@@ -30,14 +30,31 @@ import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 
 class CreditcardTokenizerFragment : Fragment() {
-
     private lateinit var webView: WebView
-    private lateinit var tokenizerUrl: String
-    private lateinit var request: CCTokenizerRequest
-    private lateinit var supportedCardTypes: List<String>
     private lateinit var config: CreditcardTokenizerConfig
+    private lateinit var jwtToken: String
+    private lateinit var tokenizerHtmlUrl: String
 
     private val handler = Handler(Looper.getMainLooper())
+
+    companion object {
+        private const val ARG_CONFIG = "config"
+        private const val ARG_JWT_TOKEN = "jwtToken"
+        private const val ARG_TOKENIZER_HTML_URL = "tokenizerHtmlUrl"
+        fun newInstance(
+            config: CreditcardTokenizerConfig,
+            jwtToken: String,
+            tokenizerHtmlUrl: String
+        ): CreditcardTokenizerFragment {
+            return CreditcardTokenizerFragment().apply {
+                arguments = Bundle().apply {
+                    putSerializable(ARG_CONFIG, config)
+                    putString(ARG_JWT_TOKEN, jwtToken)
+                    putString(ARG_TOKENIZER_HTML_URL, tokenizerHtmlUrl)
+                }
+            }
+        }
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -48,19 +65,10 @@ class CreditcardTokenizerFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
         webView = view.findViewById(R.id.webView)
         arguments?.let {
-            tokenizerUrl = it.getString(ARG_TOKENIZER_URL) ?: ""
-            request = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                it.getSerializable(ARG_REQUEST, CCTokenizerRequest::class.java)
-                    ?: throw IllegalArgumentException("Request cannot be null")
-            } else {
-                it.getSerializable(ARG_REQUEST) as? CCTokenizerRequest
-                    ?: throw IllegalArgumentException("Request cannot be null")
-            }
-            supportedCardTypes =
-                it.getStringArrayList(ARG_SUPPORTED_CARD_TYPES)?.toList() ?: emptyList()
+            tokenizerHtmlUrl = it.getString(ARG_TOKENIZER_HTML_URL) ?: ""
+            jwtToken = it.getString(ARG_JWT_TOKEN) ?: ""
             config = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 it.getSerializable(ARG_CONFIG, CreditcardTokenizerConfig::class.java)
                     ?: throw IllegalArgumentException("Config cannot be null")
@@ -68,26 +76,59 @@ class CreditcardTokenizerFragment : Fragment() {
                 it.getSerializable(ARG_CONFIG) as? CreditcardTokenizerConfig
                     ?: throw IllegalArgumentException("Config cannot be null")
             }
-
         }
-
         setupWebView()
     }
 
+    private class WebAppInterface(
+        private val handler: Handler,
+        private val onScriptLoadedCallbackFunc: () -> Unit,
+        private val config: CreditcardTokenizerConfig
+    ) {
+        @JavascriptInterface
+        fun onScriptLoaded() {
+            handler.post {
+                onScriptLoadedCallbackFunc()
+            }
+        }
+
+        @JavascriptInterface
+        fun onScriptError() {
+            handler.post {
+                config.tokenizationFailureCallback?.invoke(500, mapOf("error" to "LoadingScriptFailed"))
+            }
+        }
+
+        @JavascriptInterface
+        fun onTokenizationSuccess(statusCode: Int, token: String, cardDetailsJson: String) {
+            handler.post {
+                val cardDetails: Map<String, Any?> = Gson().fromJson(cardDetailsJson, Map::class.java) as Map<String, Any?>
+                config.tokenizationSuccessCallback?.invoke(statusCode, token, cardDetails)
+            }
+        }
+
+        @JavascriptInterface
+        fun onTokenizationFailure(statusCode: Int, errorResponseJson: String) {
+            handler.post {
+                val errorResponse: Map<String, Any?> = Gson().fromJson(errorResponseJson, Map::class.java) as Map<String, Any?>
+                config.tokenizationFailureCallback?.invoke(statusCode, errorResponse)
+            }
+        }
+    }
+
     private fun setupWebView() {
+        android.webkit.WebView.setWebContentsDebuggingEnabled(true)
         webView.settings.javaScriptEnabled = true
         webView.settings.domStorageEnabled = true
         webView.webViewClient = WebViewClient()
         webView.webChromeClient = WebChromeClient()
         webView.settings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
-        webView.addJavascriptInterface(WebAppInterface(), "AndroidInterface")
-
+        webView.addJavascriptInterface(WebAppInterface(handler, ::makeScriptToPopulateHTML, config), "AndroidInterface")
         webView.webViewClient = object : WebViewClient() {
             override fun onPageFinished(view: WebView?, url: String?) {
                 super.onPageFinished(view, url)
                 makeScriptToLoadPayoneHostedScript()
             }
-
             override fun shouldInterceptRequest(
                 view: WebView?,
                 request: WebResourceRequest?
@@ -95,51 +136,39 @@ class CreditcardTokenizerFragment : Fragment() {
                 return super.shouldInterceptRequest(view, request)
             }
         }
-
-        webView.loadUrl(tokenizerUrl)
-    }
-
-    private inner class WebAppInterface {
-        @JavascriptInterface
-        fun onScriptLoaded() {
-            handler.post {
-                makeScriptToPopulateHTML()
-            }
-        }
-
-        @JavascriptInterface
-        fun onScriptError() {
-            handler.post {
-                config.creditCardCheckCallback(Result.failure(CCTokenizerError.LoadingScriptFailed))
-            }
-        }
-
-        @JavascriptInterface
-        fun onPayCallback(response: String) {
-            handler.post {
-                try {
-                    val response = Json.decodeFromString<CCTokenizerResponse>(response)
-                    config.creditCardCheckCallback(Result.success(response))
-                } catch (e: Exception) {
-                    config.creditCardCheckCallback(Result.failure(CCTokenizerError.InvalidResponse))
-                }
-            }
-        }
+        webView.loadUrl(tokenizerHtmlUrl)
     }
 
     private fun makeScriptToLoadPayoneHostedScript() {
+        val sdkScriptEnv = mapOf(
+            "test" to mapOf(
+                "src" to "https://sdk.preprod.tokenization.secure.payone.com/1.0.1/hosted-tokenization-sdk.js",
+                "integrity" to "sha384-Ec6OPQvn8poHUzTwcUYWC/pwd5wgVuVB+jKl+Eml5MWou154pm6j2MdhhJb9uqML"
+            ),
+            "live" to mapOf(
+                "src" to "https://sdk.tokenization.secure.payone.com/1.0.1/hosted-tokenization-sdk.js",
+                "integrity" to "sha384-Ec6OPQvn8poHUzTwcUYWC/pwd5wgVuVB+jKl+Eml5MWou154pm6j2MdhhJb9uqML"
+            )
+        )
+        val env = config.environment ?: "test"
+        val scriptInfo = sdkScriptEnv[env] ?: sdkScriptEnv["test"]!!
+        val scriptSrc = scriptInfo["src"]
+        val scriptIntegrity = scriptInfo["integrity"]
         webView.evaluateJavascript(
             """
         (function() {
-            if (!document.getElementById('payone-hosted-script')) {
+            if (!document.getElementById('hosted-tokenization-sdk')) {
                 const script = document.createElement('script');
                 script.type = 'text/javascript';
-                script.src = 'https://secure.prelive.pay1-test.de/client-api/js/v1/payone_hosted_min.js';
-                script.id = 'payone-hosted-script';
+                script.src = '$scriptSrc';
+                script.id = 'hosted-tokenization-sdk';
+                script.setAttribute('integrity', '$scriptIntegrity');
+                script.setAttribute('crossorigin', 'anonymous');
                 script.onload = function() {
                     window.AndroidInterface.onScriptLoaded();
                 }
                 script.onerror = function() {
+                    console.error('Error loading Hosted Tokenization SDK script');
                     window.AndroidInterface.onScriptError();
                 }
                 document.head.appendChild(script);
@@ -147,122 +176,44 @@ class CreditcardTokenizerFragment : Fragment() {
         })();
     """.trimIndent()
         ) { result ->
-            // Handle any result from the JavaScript evaluation
             Log.d("CCTokenizer", "makeScriptToLoadPayoneHostedScript() executed: $result")
         }
     }
 
     private fun makeScriptToPopulateHTML() {
         val gson = Gson()
-        // Generate and return the script to populate HTML
+        val uiConfigJson = gson.toJson(config.uiConfig)
+        val iframeConfigJson = gson.toJson(config.iframe)
+        val locale = config.locale ?: "de_DE"
+        val submitButtonSelector = config.submitButton?.selector ?: "#submit"
         webView.evaluateJavascript(
             """
-        var supportedCardtypes = ${gson.toJson(supportedCardTypes)};
-        var config = {
-            fields: {
-                cardpan: ${gson.toJson(config.cardPan)},
-                cardcvc2: ${gson.toJson(config.cardCvc2)},
-                cardexpiremonth: ${gson.toJson(config.cardExpireMonth)},
-                cardexpireyear: ${gson.toJson(config.cardExpireYear)}
-            },
-            defaultStyle: {
-                ${generateDefaultStyleKeyValuePairs()}
-            },
-            autoCardtypeDetection: {
-                supportedCardtypes: supportedCardtypes,
-                callback: function(detectedCardtype) {
-                    document.getElementById('autodetectionResponsePre').innerHTML = detectedCardtype;
-                    
-                    if (detectedCardtype === 'V') {
-                        document.getElementById('visa').style.borderColor = '#00F';
-                        document.getElementById('mastercard').style.borderColor = '#FFF';
-                    } else if (detectedCardtype === 'M') {
-                        document.getElementById('visa').style.borderColor = '#FFF';
-                        document.getElementById('mastercard').style.borderColor = '#00F';
-                    } else {
-                        document.getElementById('visa').style.borderColor = '#FFF';
-                        document.getElementById('mastercard').style.borderColor = '#FFF';
-                    }
+        var sdkConfig = {
+            iframe: $iframeConfigJson,
+            uiConfig: $uiConfigJson,
+            locale: '$locale',
+            token: '$jwtToken'
+        };
+        if (window.HostedTokenizationSdk) {
+            window.HostedTokenizationSdk.init().then(function() {
+                window.HostedTokenizationSdk.getPaymentPage(sdkConfig);
+                var submitBtn = document.querySelector('$submitButtonSelector');
+                if (submitBtn) {
+                    submitBtn.onclick = function() {
+                        window.HostedTokenizationSdk.submitForm(
+                            (statusCode, token, cardDetails) => window.AndroidInterface.onTokenizationSuccess(statusCode, token, JSON.stringify(cardDetails)),
+                            (statusCode, errorResponse) => window.AndroidInterface.onTokenizationFailure(statusCode, JSON.stringify(errorResponse))
+                        );
+                    };
                 }
-            },
-            language: ${config.language.configValue},
-            error: "${config.error}"
-        };
-        var request = {
-            request: 'creditcardcheck',
-            responsetype: 'JSON',
-            mode: '${request.environment.ccTokenizerIdentifier}',
-            mid: '${request.mid}',
-            aid: '${request.aid}',
-            portalid: '${request.portalId}',
-            encoding: 'UTF-8',
-            storecarddata: 'yes',
-            hash: '${request.generatedHash}'
-        };
-        
-        var iframes = new window.Payone.ClientApi.HostedIFrames(config, request);
-        window.payoneIFrames = iframes;
-        
-        function payCallback(response) {
-            // Display the response in the jsonResponsePre div
-            document.getElementById('jsonResponsePre').textContent = JSON.stringify(response, null, 2);
-                    
-            // Send the JSON response back to Android
-            if (window.AndroidInterface && typeof window.AndroidInterface.onPayCallback === 'function') {
-                window.AndroidInterface.onPayCallback(JSON.stringify(response));
-            } else {
-                console.error('AndroidInterface is not defined or onPayCallback is not a function.');
-            }
+            }).catch(function(error) {
+                console.error('Error initializing Hosted Tokenization SDK:', error);
+                window.AndroidInterface.onScriptError(); 
+            });
         }
-        
-        document.getElementById('${config.submitButtonId}').onclick = function() {
-            if (typeof window.payoneIFrames !== 'undefined') {
-                // Call creditCardCheck and pass the 'payCallback' function as the callback
-                window.payoneIFrames.creditCardCheck('payCallback');
-            } else {
-                console.error('payoneIFrames is not initialized.');
-                alert('payoneIFrames is not initialized.');
-            }
-        };
-        ;
         """.trimIndent()
         ) { result ->
             Log.d("CCTokenizer", "makeScriptToPopulateHTML() executed: $result")
-        }
-    }
-
-    private fun makeScriptToInitiateAndHandleCheck() {
-        Log.d("CCTokenizer", "makeScriptToInitiateAndHandleCheck() executed")
-    }
-
-    private fun generateDefaultStyleKeyValuePairs(): String {
-        return config.defaultStyles.entries.joinToString(separator = ",\n") {
-            val key = it.key
-            val value = it.value
-            "\"$key\": \"$value\""
-        }
-    }
-
-    companion object {
-        private const val ARG_TOKENIZER_URL = "tokenizerUrl"
-        private const val ARG_REQUEST = "request"
-        private const val ARG_SUPPORTED_CARD_TYPES = "supportedCardTypes"
-        private const val ARG_CONFIG = "config"
-
-        fun newInstance(
-            tokenizerUrl: String,
-            request: CCTokenizerRequest,
-            supportedCardTypes: List<String>,
-            config: CreditcardTokenizerConfig
-        ): CreditcardTokenizerFragment {
-            return CreditcardTokenizerFragment().apply {
-                arguments = Bundle().apply {
-                    putString(ARG_TOKENIZER_URL, tokenizerUrl)
-                    putSerializable(ARG_REQUEST, request)
-                    putStringArrayList(ARG_SUPPORTED_CARD_TYPES, ArrayList(supportedCardTypes))
-                    putSerializable(ARG_CONFIG, config)
-                }
-            }
         }
     }
 

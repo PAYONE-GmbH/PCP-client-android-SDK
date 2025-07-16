@@ -10,32 +10,38 @@ package com.payone.pcp_client_android_sdk.cctokenizer
 
 import java.io.Serializable
 
-// A customizable field configuration for the required fields that will be injected into the website of the credit card tokenizer.
-data class Field(
-    val selector: String,
-    val style: String?,
-    val type: String,
-    val size: String?,
-    val maxlength: String?,
-    val length: Map<String, Int>?,
-    val iframe: Pair<String, String>?
+// UI customization options
+data class UIConfig(
+    val formBgColor: String? = null,
+    val fieldBgColor: String? = null,
+    val fieldBorder: String? = null,
+    val fieldOutline: String? = null,
+    val fieldLabelColor: String? = null,
+    val fieldPlaceholderColor: String? = null,
+    val fieldTextColor: String? = null,
+    val fieldErrorCodeColor: String? = null
 ) : Serializable
 
-// The language of the credit card tokenizer. Currently, English or German is available.
-enum class PayoneLanguage(val configValue: String) {
-    English("Payone.ClientApi.Language.en"),
-    German("Payone.ClientApi.Language.de")
-}
+// Iframe config for the payment form
+data class IframeConfig(
+    val iframeWrapperId: String,
+    val height: Int? = null,
+    val width: Int? = null
+) : Serializable
+
+// Submit button config
+data class SubmitButtonConfig(
+    val selector: String? = null,
+    val element: Any? = null // For Android, could be a View reference
+) : Serializable
 
 // The configuration object to set up the credit card tokenizer.
 data class CreditcardTokenizerConfig(
-    val cardPan: Field,
-    val cardCvc2: Field,
-    val cardExpireMonth: Field,
-    val cardExpireYear: Field,
-    val defaultStyles: Map<String, String>,
-    val language: PayoneLanguage,
-    val error: String,
-    val submitButtonId: String,
-    val creditCardCheckCallback: (Result<CCTokenizerResponse>) -> Unit
+    val iframe: IframeConfig? = null,
+    val uiConfig: UIConfig? = null,
+    val locale: String? = null,
+    val submitButton: SubmitButtonConfig? = null,
+    val tokenizationSuccessCallback: ((Int, String, Map<String, Any?>) -> Unit)? = null,
+    val tokenizationFailureCallback: ((Int, Map<String, Any?>) -> Unit)? = null,
+    val environment: String, // "test" or "live"
 ) : Serializable
