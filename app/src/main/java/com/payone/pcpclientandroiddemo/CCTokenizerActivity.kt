@@ -8,6 +8,7 @@ import com.payone.pcp_client_android_sdk.cctokenizer.CreditcardTokenizerFragment
 import com.payone.pcp_client_android_sdk.cctokenizer.IframeConfig
 import com.payone.pcp_client_android_sdk.cctokenizer.SubmitButtonConfig
 import com.payone.pcp_client_android_sdk.cctokenizer.UIConfig
+import com.payone.pcpclientandroiddemo.util.Header
 
 class CCTokenizerActivity : AppCompatActivity() {
     private val uiConfig = UIConfig(
@@ -52,6 +53,14 @@ class CCTokenizerActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_cc_tokenizer)
+
+        Header(this, "CC Tokenizer").setup()
+
+
+        if (supportFragmentManager.backStackEntryCount > 0 || !isTaskRoot) {
+            supportActionBar?.setDisplayHomeAsUpEnabled(true)
+        }
+
         val btnStart = findViewById<Button>(R.id.btnStartCCTokenizer)
         btnStart.setOnClickListener {
             val fragment = CreditcardTokenizerFragment.newInstance(
@@ -65,4 +74,6 @@ class CCTokenizerActivity : AppCompatActivity() {
             ).commit()
         }
     }
+
+    override fun onSupportNavigateUp(): Boolean = Header.onNavigateUp(this)
 }

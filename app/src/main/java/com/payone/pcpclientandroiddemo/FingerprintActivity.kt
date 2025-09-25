@@ -6,12 +6,18 @@ import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import com.payone.pcp_client_android_sdk.fingerprinttokenizer.FingerprintTokenizer
 import com.payone.pcp_client_android_sdk.utils.PCPEnvironment
+import com.payone.pcpclientandroiddemo.util.Header
 
 class FingerprintActivity : AppCompatActivity() {
     private lateinit var fingerprintTokenizer: FingerprintTokenizer
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_fingerprint)
+
+
+        Header(this, "Fingerprint Tokenizer").setup()
+
+
         val tvSnippetToken = findViewById<TextView>(R.id.tvSnippetToken)
         val btnStart = findViewById<Button>(R.id.btnStartFingerprint)
         fingerprintTokenizer = FingerprintTokenizer(
@@ -34,4 +40,6 @@ class FingerprintActivity : AppCompatActivity() {
             }
         }
     }
+
+    override fun onSupportNavigateUp(): Boolean = Header.onNavigateUp(this)
 }

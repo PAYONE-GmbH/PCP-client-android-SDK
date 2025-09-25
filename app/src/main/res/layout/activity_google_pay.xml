@@ -5,15 +5,6 @@
     android:orientation="vertical"
     android:padding="24dp">
 
-    <TextView
-        android:id="@+id/googlepay_title"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Google Pay"
-        android:textSize="24sp"
-        android:textStyle="bold"
-        android:layout_gravity="center_horizontal"
-        android:layout_marginBottom="16dp" />
 
     <androidx.compose.ui.platform.ComposeView
         android:id="@+id/compose_google_pay"

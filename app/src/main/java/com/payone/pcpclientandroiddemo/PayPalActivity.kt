@@ -14,6 +14,7 @@ import com.paypal.android.paypalwebpayments.PayPalWebCheckoutFinishVaultResult
 import com.paypal.android.paypalwebpayments.PayPalWebCheckoutFundingSource
 import com.paypal.android.paypalwebpayments.PayPalWebCheckoutRequest
 import androidx.core.content.ContentProviderCompat.requireContext
+import com.payone.pcpclientandroiddemo.util.Header
 
 class PayPalActivity : AppCompatActivity() {
 
@@ -24,6 +25,9 @@ class PayPalActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_paypal)
 
+        Header(this, "Paypal").setup()
+
+
         val config = CoreConfig(
             "AUn5n-4qxBUkdzQBv6f8yd8F4AWdEvV6nLzbAifDILhKGCjOS62qQLiKbUbpIKH_O2Z3OL8CvX7ucZfh",
             environment = Environment.SANDBOX
@@ -32,7 +36,7 @@ class PayPalActivity : AppCompatActivity() {
 
         val payPalButton = findViewById<PayPalButton>(R.id.paypal_button)
         payPalButton.setOnClickListener {
-            val id = "3YX73566S7620433T"
+            val id = "2YC501593T898163N"
             this.launchPayPalCheckout(orderId = id)
         }
     }
@@ -70,31 +74,31 @@ class PayPalActivity : AppCompatActivity() {
     }
 
     fun checkForPayPalAuthCompletion(intent: Intent) = authState?.let { state ->
-    Log.d("PayPalActivity", "Checking for PayPal auth completion...")
+        Log.d("PayPalActivity", "Checking for PayPal auth completion...")
         // check for checkout completion
         when (val checkoutResult = payPalWebCheckoutClient.finishStart(intent, state)) {
             is PayPalWebCheckoutFinishStartResult.Success -> {
                 Log.d("PayPalActivity", "Capture or authorize order on your server.")
-                authState = null 
+                authState = null
             }
 
             is PayPalWebCheckoutFinishStartResult.Failure -> {
                 Log.d("PayPalActivity", "Handle approve order failure.")
-                authState = null 
+                authState = null
             }
 
             is PayPalWebCheckoutFinishStartResult.Canceled -> {
                 Log.d("PayPalActivity", "Notify user PayPal checkout was canceled.")
-                authState = null 
+                authState = null
             }
 
             PayPalWebCheckoutFinishStartResult.NoResult -> {
                 // there isn't enough information to determine the state of the auth challenge for this payment method
                 Log.d("PayPalActivity", "No PayPal checkout result to process.")
-                 authState = null 
+                authState = null
             }
         }
-
-
     }
+
+    override fun onSupportNavigateUp(): Boolean = Header.onNavigateUp(this)
 }

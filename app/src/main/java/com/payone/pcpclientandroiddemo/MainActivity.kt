@@ -12,6 +12,8 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        supportActionBar?.title = "PCP Client Android SDK Demo"
+
         val fingerprintBtn = findViewById<Button>(R.id.fingerprint_button)
         val ccTokenizerBtn = findViewById<Button>(R.id.btnCCTokenizer)
         val googlePayBtn = findViewById<Button>(R.id.btnGooglePay)

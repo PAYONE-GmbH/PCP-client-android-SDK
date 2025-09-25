@@ -12,6 +12,7 @@ import com.google.android.gms.wallet.PaymentDataRequest
 import com.google.android.gms.wallet.PaymentsClient
 import com.google.android.gms.wallet.Wallet
 import com.google.android.gms.wallet.WalletConstants
+import com.payone.pcpclientandroiddemo.util.Header
 
 class GooglePayActivity : AppCompatActivity() {
     private val LOAD_PAYMENT_DATA_REQUEST_CODE = 991
@@ -19,6 +20,11 @@ class GooglePayActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_google_pay)
+
+
+
+        Header(this, "Google Pay").setup()
+
 
         paymentsClient = Wallet.getPaymentsClient(
             this,
@@ -40,11 +46,12 @@ class GooglePayActivity : AppCompatActivity() {
     }
 
     private fun launchGooglePay() {
-        val paymentDataRequestJson = com.payone.pcpclientandroiddemo.gpay.GooglePayRequestJson.getRequestJson(
-            merchantId = "your-merchant-id",
-            merchantName = "Your Merchant Name",
-            totalPrice = "100.00"
-        )
+        val paymentDataRequestJson =
+            com.payone.pcpclientandroiddemo.gpay.GooglePayRequestJson.getRequestJson(
+                merchantId = "your-merchant-id",
+                merchantName = "Your Merchant Name",
+                totalPrice = "100.00"
+            )
         val request = PaymentDataRequest.fromJson(paymentDataRequestJson)
         AutoResolveHelper.resolveTask(
             paymentsClient.loadPaymentData(request),
@@ -63,9 +70,11 @@ class GooglePayActivity : AppCompatActivity() {
                     android.util.Log.d("GooglePay", "Payment processed but paymentData is null")
                 }
             }
+
             android.app.Activity.RESULT_CANCELED -> {
                 android.util.Log.d("GooglePay", "Payment canceled by user")
             }
+
             AutoResolveHelper.RESULT_ERROR -> {
                 val status = AutoResolveHelper.getStatusFromIntent(data)
                 android.util.Log.e("GooglePay", "Payment error: ${status?.statusMessage}")
@@ -79,4 +88,6 @@ class GooglePayActivity : AppCompatActivity() {
             handleGooglePayResult(resultCode, data)
         }
     }
+
+    override fun onSupportNavigateUp(): Boolean = Header.onNavigateUp(this)
 }
