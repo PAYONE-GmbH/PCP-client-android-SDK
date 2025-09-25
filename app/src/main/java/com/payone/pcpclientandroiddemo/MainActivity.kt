@@ -24,63 +24,26 @@ import com.payone.pcpclientandroiddemo.gpay.GooglePayRequestJson
 import com.payone.pcpclientandroiddemo.paypal.PayPalHandler
 
 class MainActivity : AppCompatActivity() {
-    private val LOAD_PAYMENT_DATA_REQUEST_CODE = 991
-    private lateinit var googlePayHandler: GooglePayHandler
-
-        override fun onNewIntent(intent: Intent) {
-                super.onNewIntent(intent)
-                setIntent(intent)
-        }
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
         val fingerprintBtn = findViewById<Button>(R.id.fingerprint_button)
-        val tvSnippetToken = findViewById<TextView>(R.id.tvSnippetToken)
         val ccTokenizerBtn = findViewById<Button>(R.id.btnCCTokenizer)
-        val payPalButton = findViewById<PayPalButton>(R.id.paypal_button)
+        val googlePayBtn = findViewById<Button>(R.id.btnGooglePay)
+        val payPalBtn = findViewById<Button>(R.id.btnPayPal)
 
-        val fingerprintHandler = FingerprintTokenizerHandler(this, tvSnippetToken)
         fingerprintBtn.setOnClickListener {
-            fingerprintHandler.startTokenization()
+            startActivity(Intent(this, FingerprintActivity::class.java))
         }
-
-        val ccTokenizerHandler = CCTokenizerHandler(supportFragmentManager)
         ccTokenizerBtn.setOnClickListener {
-            ccTokenizerHandler.startTokenization()
+            startActivity(Intent(this, CCTokenizerActivity::class.java))
         }
-
-        // Set up Google Pay Handler (PaymentsClient is now created inside the handler)
-        googlePayHandler = GooglePayHandler(this, LOAD_PAYMENT_DATA_REQUEST_CODE)
-
-        val composeView = findViewById<ComposeView>(R.id.compose_google_pay)
-        composeView.setContent {
-            val startPayment = remember { mutableStateOf(false) }
-            if (startPayment.value) {
-                startPayment.value = false
-                googlePayHandler.launchGooglePay()
-            }
-            GooglePayButton(onClick = { startPayment.value = true })
+        googlePayBtn.setOnClickListener {
+            startActivity(Intent(this, GooglePayActivity::class.java))
         }
-
-        val payPalHandler = PayPalHandler(this)
-        // TODO: Initialize with your clientId and returnUrl
-        payPalHandler.initialize("YOUR_CLIENT_ID", "myapp://")
-
-        payPalButton.setOnClickListener {
-            // Replace with your actual orderId from backend
-           payPalHandler.startPayment(orderId = "id")
-          
-        }
-    }
-
-    // ...existing code...
-
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == LOAD_PAYMENT_DATA_REQUEST_CODE) {
-            googlePayHandler.handleGooglePayResult(resultCode, data)
+        payPalBtn.setOnClickListener {
+            startActivity(Intent(this, PayPalActivity::class.java))
         }
     }
 }
