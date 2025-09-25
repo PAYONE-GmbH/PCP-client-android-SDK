@@ -18,20 +18,20 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name=".PayPalActivity" android:exported="true" />
-        <activity android:name=".FingerprintActivity" android:exported="true" />
-        <activity android:name=".CCTokenizerActivity" android:exported="true" />
-        <activity android:name=".GooglePayActivity" android:exported="true" />
-        <activity android:name=".MyPaymentsActivity" android:exported="true"
+        <activity android:name=".PayPalActivity" android:exported="true"
             android:launchMode="singleTop">
-
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
-                <data android:scheme="myapp" />
+                <data android:scheme="pcpdemo" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
             </intent-filter>
+
         </activity>
+        <activity android:name=".FingerprintActivity" android:exported="true" />
+        <activity android:name=".CCTokenizerActivity" android:exported="true" />
+        <activity android:name=".GooglePayActivity" android:exported="true" />
+
     </application>
 
 </manifest>
