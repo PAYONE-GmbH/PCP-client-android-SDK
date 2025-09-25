@@ -22,23 +22,15 @@
         <activity android:name=".FingerprintActivity" android:exported="true" />
         <activity android:name=".CCTokenizerActivity" android:exported="true" />
         <activity android:name=".GooglePayActivity" android:exported="true" />
-        <activity
-            android:name=".MyCardPaymentActivity"
-            android:launchMode="singleTop"
-            android:exported="true">
+        <activity android:name=".MyPaymentsActivity" android:exported="true"
+            android:launchMode="singleTop">
 
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
-  
-            <data
-                    android:scheme="myapp" />
-  
-            <category
-                    android:name="android.intent.category.DEFAULT" />; <category
-                    android:name="android.intent.category.BROWSABLE" />
-
+                <data android:scheme="myapp" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
             </intent-filter>
-
         </activity>
     </application>
 

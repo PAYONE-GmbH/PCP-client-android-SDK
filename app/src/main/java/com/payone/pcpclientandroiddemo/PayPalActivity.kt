@@ -10,7 +10,7 @@ class PayPalActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_paypal)
         val payPalHandler = PayPalHandler(this)
-        payPalHandler.initialize("YOUR_CLIENT_ID", "myapp://")
+        payPalHandler.initialize("AUn5n-4qxBUkdzQBv6f8yd8F4AWdEvV6nLzbAifDILhKGCjOS62qQLiKbUbpIKH_O2Z3OL8CvX7ucZfh", "myapp://return_url")
         val payPalButton = findViewById<PayPalButton>(R.id.paypal_button)
         payPalButton.setOnClickListener {
             payPalHandler.startPayment(orderId = "id")

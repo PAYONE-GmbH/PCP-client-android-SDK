@@ -63,7 +63,7 @@ dependencies {
     implementation(libs.androidx.constraintlayout)
     implementation("com.google.pay.button:compose-pay-button:1.1.0")
     implementation("com.google.android.gms:play-services-wallet:19.3.0")
-    implementation("com.paypal.android:card-payments:2.0.1")
+    implementation("com.paypal.android:paypal-web-payments:2.0.1")
     implementation("com.paypal.android:payment-buttons:2.0.1")
 
     testImplementation(libs.junit)
