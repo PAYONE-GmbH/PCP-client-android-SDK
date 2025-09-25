@@ -12,18 +12,14 @@ import com.google.android.gms.wallet.PaymentDataRequest
 import com.google.android.gms.wallet.PaymentsClient
 import com.google.android.gms.wallet.Wallet
 import com.google.android.gms.wallet.WalletConstants
-import com.payone.pcpclientandroiddemo.util.Header
 
-class GooglePayActivity : AppCompatActivity() {
+class GooglePayActivity : BaseActivity() {
     private val LOAD_PAYMENT_DATA_REQUEST_CODE = 991
     private lateinit var paymentsClient: PaymentsClient
     override fun onCreate(savedInstanceState: Bundle?) {
+        headerTitle = "Google Pay"
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_google_pay)
-
-
-
-        Header(this, "Google Pay").setup()
 
 
         paymentsClient = Wallet.getPaymentsClient(
@@ -89,5 +85,4 @@ class GooglePayActivity : AppCompatActivity() {
         }
     }
 
-    override fun onSupportNavigateUp(): Boolean = Header.onNavigateUp(this)
 }

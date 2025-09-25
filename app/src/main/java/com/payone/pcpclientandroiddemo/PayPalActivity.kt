@@ -14,18 +14,17 @@ import com.paypal.android.paypalwebpayments.PayPalWebCheckoutFinishVaultResult
 import com.paypal.android.paypalwebpayments.PayPalWebCheckoutFundingSource
 import com.paypal.android.paypalwebpayments.PayPalWebCheckoutRequest
 import androidx.core.content.ContentProviderCompat.requireContext
-import com.payone.pcpclientandroiddemo.util.Header
 
-class PayPalActivity : AppCompatActivity() {
+class PayPalActivity : BaseActivity() {
 
     lateinit var payPalWebCheckoutClient: PayPalWebCheckoutClient
     var authState: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        headerTitle = "Paypal"
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_paypal)
 
-        Header(this, "Paypal").setup()
 
 
         val config = CoreConfig(
@@ -100,5 +99,4 @@ class PayPalActivity : AppCompatActivity() {
         }
     }
 
-    override fun onSupportNavigateUp(): Boolean = Header.onNavigateUp(this)
 }

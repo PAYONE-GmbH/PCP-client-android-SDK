@@ -2,17 +2,15 @@ package com.payone.pcpclientandroiddemo
 
 import android.os.Bundle
 import android.widget.Button
-import androidx.appcompat.app.AppCompatActivity
 import com.payone.pcp_client_android_sdk.cctokenizer.CreditcardTokenizerConfig
 import com.payone.pcp_client_android_sdk.cctokenizer.CreditcardTokenizerFragment
 import com.payone.pcp_client_android_sdk.cctokenizer.IframeConfig
 import com.payone.pcp_client_android_sdk.cctokenizer.SubmitButtonConfig
 import com.payone.pcp_client_android_sdk.cctokenizer.UIConfig
-import com.payone.pcpclientandroiddemo.util.Header
 
-class CCTokenizerActivity : AppCompatActivity() {
+class CCTokenizerActivity : BaseActivity() {
     private val uiConfig = UIConfig(
-        formBgColor = "#64bbb7",
+        formBgColor = "#446462ff",
         fieldBgColor = "wheat",
         fieldBorder = "1px solid #b33cd8",
         fieldOutline = "#101010 solid 5px",
@@ -51,11 +49,9 @@ class CCTokenizerActivity : AppCompatActivity() {
     private val jwtToken = "<Token to be retrieved from the CommercePlatform-API>"
     private val tokenizerHtmlUrl = "https://path-to-your-server/creditcard-tokenizer.html"
     override fun onCreate(savedInstanceState: Bundle?) {
+        headerTitle = "CC Tokenizer"
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_cc_tokenizer)
-
-        Header(this, "CC Tokenizer").setup()
-
 
         if (supportFragmentManager.backStackEntryCount > 0 || !isTaskRoot) {
             supportActionBar?.setDisplayHomeAsUpEnabled(true)
@@ -75,5 +71,4 @@ class CCTokenizerActivity : AppCompatActivity() {
         }
     }
 
-    override fun onSupportNavigateUp(): Boolean = Header.onNavigateUp(this)
 }

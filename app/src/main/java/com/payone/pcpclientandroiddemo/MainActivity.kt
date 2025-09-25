@@ -7,12 +7,12 @@ import android.widget.Button
 import androidx.appcompat.app.AppCompatActivity
 
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : BaseActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
+        headerTitle = "PCP Client Android SDK Demo"
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        supportActionBar?.title = "PCP Client Android SDK Demo"
 
         val fingerprintBtn = findViewById<Button>(R.id.fingerprint_button)
         val ccTokenizerBtn = findViewById<Button>(R.id.btnCCTokenizer)
