@@ -4,14 +4,34 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
 
-    <application android:allowBackup="true" android:dataExtractionRules="@xml/data_extraction_rules" android:fullBackupContent="@xml/backup_rules" android:enableOnBackInvokedCallback="true" android:icon="@mipmap/ic_launcher" android:label="@string/app_name" android:roundIcon="@mipmap/ic_launcher_round" android:supportsRtl="true" android:theme="@style/Theme.PCPClientAndroidDemo" android:networkSecurityConfig="@xml/network_security_config" tools:targetApi="34">
-        <activity android:name=".MainActivity" android:exported="true" android:label="@string/app_name" android:theme="@style/Theme.PCPClientAndroidDemo">
+    <application android:allowBackup="true" android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules" android:enableOnBackInvokedCallback="true"
+        android:icon="@mipmap/ic_launcher" android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round" android:supportsRtl="true"
+        android:theme="@style/Theme.PCPClientAndroidDemo"
+        android:networkSecurityConfig="@xml/network_security_config" tools:targetApi="34">
+        <activity android:name=".MainActivity" android:exported="true"
+            android:label="@string/app_name" android:theme="@style/Theme.PCPClientAndroidDemo">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <activity android:name=".PayPalActivity" android:exported="true"
+            android:launchMode="singleTop">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <data android:scheme="pcpdemo" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+            </intent-filter>
+
+        </activity>
+        <activity android:name=".FingerprintActivity" android:exported="true" />
+        <activity android:name=".CCTokenizerActivity" android:exported="true" />
+        <activity android:name=".GooglePayActivity" android:exported="true" />
+
     </application>
 
 </manifest>

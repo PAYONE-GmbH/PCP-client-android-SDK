@@ -13,25 +13,31 @@ Welcome to the PAYONE Commerce Platform Client Android SDK for the PAYONE Commer
 - [Features](#features)
 - [Installation](#installation)
 - [Usage](#usage)
-  - [Creditcard Tokenizer](#creditcard-tokenizer)
-    - [1. Add the HTML page](#1-add-the-html-page)
-    - [2. Imports for CreditCardTokenizer](#2-imports-for-creditcardtokenizer)
-    - [3. Configure the Tokenizer](#3-configure-the-tokenizer)
-    - [4. Fetch the JWT Token from your Backend](#4-fetch-the-jwt-token-from-your-backend)
-    - [5. Host and load the HTML page](#5-host-and-load-the-html-page)
-    - [6. Initialize the Tokenizer](#6-initialize-the-tokenizer)
-    - [7. Customization and Callbacks](#7-customization-and-callbacks)
-    - [8. PCI DSS & Security](#8-pci-dss--security)
-    - [9. Migration Note](#9-migration-note)
-  - [Fingerprint Tokenizer](#fingerprint-tokenizer)
-    - [1. Import for Fingerprint Tokenizer](#1-import-for-fingerprint-tokenizer)
-    - [2. Create a new Fingerprint tokenizer instance](#2-create-a-new-fingerprint-tokenizer-instance)
-    - [3. Get the snippet token](#3-get-the-snippet-token)
-  - [Google Pay Integration](#google-pay-integration)
-    - [Setup Google Pay Integration](#setup-google-pay-integration-compose-example)
-      - [1. Install Dependencies](#1-install-dependencies)
-      - [2. Create the Button and handle the payment](#2-create-the-button-and-handle-the-payment)
-    - [Button Configuration Options](#button-configuration-options)
+    - [Creditcard Tokenizer](#creditcard-tokenizer)
+        - [1. Add the HTML page](#1-add-the-html-page)
+        - [2. Imports for CreditCardTokenizer](#2-imports-for-creditcardtokenizer)
+        - [3. Configure the Tokenizer](#3-configure-the-tokenizer)
+        - [4. Fetch the JWT Token from your Backend](#4-fetch-the-jwt-token-from-your-backend)
+        - [5. Host and load the HTML page](#5-host-and-load-the-html-page)
+        - [6. Initialize the Tokenizer](#6-initialize-the-tokenizer)
+        - [7. Customization and Callbacks](#7-customization-and-callbacks)
+        - [8. PCI DSS & Security](#8-pci-dss--security)
+        - [9. Migration Note](#9-migration-note)
+    - [Fingerprint Tokenizer](#fingerprint-tokenizer)
+        - [1. Import for Fingerprint Tokenizer](#1-import-for-fingerprint-tokenizer)
+        - [2. Create a new Fingerprint tokenizer instance](#2-create-a-new-fingerprint-tokenizer-instance)
+        - [3. Get the snippet token](#3-get-the-snippet-token)
+    - [Google Pay Integration](#google-pay-integration)
+        - [Setup Google Pay Integration](#setup-google-pay-integration-compose-example)
+            - [1. Install Dependencies](#1-install-dependencies)
+            - [2. Create the Button and handle the payment](#2-create-the-button-and-handle-the-payment)
+        - [Button Configuration Options](#button-configuration-options)
+    - [PayPal Integration](#paypal-integration)
+        - [1. Add Dependencies](#1-add-dependencies)
+        - [2. Imports for PayPal Integration](#2-imports-for-paypal-integration)
+        - [3. Configure and Launch PayPal Checkout](#3-configure-and-launch-paypal-checkout)
+        - [4. Handle Authentication Completion](#4-handle-authentication-completion)
+        - [5. UI Feedback](#5-ui-feedback)
 - [Demonstration Projects](#demonstration-projects)
 - [Contributing](#contributing)
 - [Releasing the library](#releasing-the-library)
@@ -57,6 +63,104 @@ dependencies {
 **[back to top](#table-of-contents)**
 
 ## Usage
+
+### PayPal Integration
+
+The SDK provides a simple integration for PayPal web payments using the official PayPal Android SDK. The example app demonstrates how to launch a PayPal checkout flow, handle authentication challenges, and display results in the UI.
+
+#### 1. Add Dependencies
+
+Add the following dependencies to your `build.gradle.kts`:
+
+```kotlin
+dependencies {
+    implementation("com.paypal.android:payment-buttons:<latest-version>")
+    implementation("com.paypal.android:paypal-web-payments:<latest-version>")
+}
+```
+
+#### 2. Imports for PayPal Integration
+
+```kotlin
+import com.paypal.android.corepayments.CoreConfig
+import com.paypal.android.corepayments.Environment
+import com.paypal.android.paymentbuttons.PayPalButton
+import com.paypal.android.paypalwebpayments.*
+```
+
+#### 3. Configure and Launch PayPal Checkout
+
+```kotlin
+val config = CoreConfig(
+    clientId,
+    environment = Environment.SANDBOX // Use Environment.LIVE for production
+)
+val payPalWebCheckoutClient = PayPalWebCheckoutClient(this, config, "yourapp://return_url")
+
+val payPalButton = findViewById<PayPalButton>(R.id.paypal_button)
+payPalButton.setOnClickListener {
+    val orderId = getPaypalExecutionIdFromServer()
+    launchPayPalCheckout(orderId)
+}
+
+private fun launchPayPalCheckout(orderId: String) {
+    val request = PayPalWebCheckoutRequest(
+        orderId,
+        fundingSource = PayPalWebCheckoutFundingSource.PAYPAL
+    )
+    when (val result = payPalWebCheckoutClient.start(this, request)) {
+        is PayPalPresentAuthChallengeResult.Success -> {
+            // Show challenge to user, save authState
+            authState = result.authState
+        }
+        is PayPalPresentAuthChallengeResult.Failure -> {
+            // Show error in UI
+        }
+    }
+}
+```
+
+#### 4. Handle Authentication Completion
+
+```kotlin
+override fun onResume() {
+    super.onResume()
+    checkForPayPalAuthCompletion(intent)
+}
+
+override fun onNewIntent(newIntent: Intent) {
+    super.onNewIntent(newIntent)
+    checkForPayPalAuthCompletion(newIntent)
+}
+
+fun checkForPayPalAuthCompletion(intent: Intent) = authState?.let { state ->
+    when (val result = payPalWebCheckoutClient.finishStart(intent, state)) {
+        is PayPalWebCheckoutFinishStartResult.Success -> {
+            // Capture or authorize order on your server
+            completeOrderOnServer()
+            authState = null
+        }
+        is PayPalWebCheckoutFinishStartResult.Failure -> {
+            // Show error in UI
+            authState = null
+        }
+        is PayPalWebCheckoutFinishStartResult.Canceled -> {
+            // Notify user checkout was canceled
+            authState = null
+        }
+        PayPalWebCheckoutFinishStartResult.NoResult -> {
+            // No result to process
+            authState = null
+        }
+    }
+}
+```
+
+#### 5. UI Feedback
+
+- The example app displays all status and result messages in a `TextView` for clear user feedback.
+- Replace placeholder values (`clientId`, `ORDER_ID`, etc.) with your own credentials and order IDs.
+
 
 ### Creditcard Tokenizer
 
