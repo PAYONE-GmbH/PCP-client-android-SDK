@@ -88,7 +88,7 @@ class PayPalActivity : BaseActivity() {
         // check for checkout completion
         when (val checkoutResult = payPalWebCheckoutClient.finishStart(intent, state)) {
             is PayPalWebCheckoutFinishStartResult.Success -> {
-                statusTextView.text = "Capture or authorize order on your server."
+                statusTextView.text = "Capture or authorize order on your server. OrderId: ${checkoutResult.orderId}"
                 this.completeOrderOnServer()
                 authState = null
             }
