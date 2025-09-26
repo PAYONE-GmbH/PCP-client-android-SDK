@@ -39,7 +39,7 @@ class PayPalActivity : BaseActivity() {
 
         val payPalButton = findViewById<PayPalButton>(R.id.paypal_button)
         payPalButton.setOnClickListener {
-            val id = this.getOrderIdFromServer()
+            val id = this.getPaypalExecutionIdFromServer()
             this.launchPayPalCheckout(orderId = id)
         }
     }
@@ -54,7 +54,7 @@ class PayPalActivity : BaseActivity() {
         checkForPayPalAuthCompletion(newIntent)
     }
 
-    private fun getOrderIdFromServer(): String{
+    private fun getPaypalExecutionIdFromServer(): String{
         // create an order and parse the payPalExecutionId and return it
         return "ORDER_ID"
     }
