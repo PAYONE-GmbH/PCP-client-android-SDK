@@ -145,7 +145,7 @@ class CreditcardTokenizerFragment : Fragment() {
                 "integrity" to "sha384-2mqrh4mWkGZN9XmQeJFzKX5t+i9at3NYnUT9qvS2GiMRe8a6pigcsaxGh5y7KwbG"
             )
         )
-        val env = config.environment ?: "test"
+        val env = config.mode ?: "test"
         val scriptInfo = sdkScriptEnv[env] ?: sdkScriptEnv["test"]!!
         val scriptSrc = scriptInfo["src"]
         val scriptIntegrity = scriptInfo["integrity"]
@@ -190,7 +190,7 @@ class CreditcardTokenizerFragment : Fragment() {
         val allowedCardSchemesJson = gson.toJson(config.allowedCardSchemes)
         val locale = config.locale ?: "de_DE"
         val token = config.token
-        val mode = config.mode ?: "live"
+        val mode = config.mode ?: "test"
         val submitButtonSelector = config.submitButton.selector ?: "#submit"
     
         webView.evaluateJavascript(

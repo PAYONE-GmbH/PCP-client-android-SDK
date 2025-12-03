@@ -77,36 +77,63 @@ data class SubmitButtonConfig(
     val element: Any? = null // For Android, could be a View reference
 ) : Serializable
 
-// Field errors configuration
-data class FieldErrors(
+// Security code errors configuration
+data class SecurityCodeErrors(
+    val isRequired: String? = null,
+    val amexCardSecurityCodeError: String? = null,
+    val generalSecurityCodeError: String? = null
+) : Serializable
+
+// Locale text labels
+data class LocaleTextLabels(
+    val cardNumber: String? = null,
+    val cardholderName: String? = null,
+    val expiryDate: String? = null,
+    val securityCode: String? = null
+) : Serializable
+
+// Locale text placeholders
+data class LocaleTextPlaceholders(
+    val cardNumber: String? = null,
+    val cardholderName: String? = null,
+    val expiryDate: String? = null,
+    val securityCode: String? = null
+) : Serializable
+
+// Locale text aria labels
+data class LocaleTextAriaLabels(
+    val cardNumber: String? = null,
+    val cardholderName: String? = null,
+    val expiryDate: String? = null,
+    val securityCode: String? = null
+) : Serializable
+
+// Locale text errors
+data class LocaleTextErrors(
+    val cardNumber: CardNumberErrors? = null,
+    val cardholderName: CardholderNameErrors? = null,
+    val expiryDate: ExpiryDateErrors? = null,
+    val securityCode: SecurityCodeErrors? = null
+) : Serializable
+
+// Card number error fields
+data class CardNumberErrors(
     val isRequired: String? = null,
     val isInvalid: String? = null,
     val isTooShort: String? = null,
     val notSupported: String? = null
 ) : Serializable
 
-// Locale text labels
-data class LocaleTextLabels(
-    val cardNumber: String? = null,
-    val cardholderName: String? = null
+// Cardholder name error fields
+data class CardholderNameErrors(
+    val isRequired: String? = null,
+    val isInvalid: String? = null
 ) : Serializable
 
-// Locale text placeholders
-data class LocaleTextPlaceholders(
-    val cardNumber: String? = null,
-    val cardholderName: String? = null
-) : Serializable
-
-// Locale text aria labels
-data class LocaleTextAriaLabels(
-    val cardNumber: String? = null,
-    val cardholderName: String? = null
-) : Serializable
-
-// Locale text errors
-data class LocaleTextErrors(
-    val cardNumber: FieldErrors? = null,
-    val cardholderName: FieldErrors? = null // Note: In TS this omits isTooShort and notSupported
+// Expiry date error fields
+data class ExpiryDateErrors(
+    val isRequired: String? = null,
+    val isInvalid: String? = null
 ) : Serializable
 
 // Locale text configuration
@@ -144,5 +171,4 @@ data class CreditcardTokenizerConfig(
     val submitButton: SubmitButtonConfig,
     val tokenizationSuccessCallback: (statusCode: Int, token: String, cardDetails: CardDetails, inputMode: String) -> Unit,
     val tokenizationFailureCallback: (statusCode: Int, errorResponse: Map<String, Any?>) -> Unit,
-    val environment: String // "test" or "live"
 ) : Serializable

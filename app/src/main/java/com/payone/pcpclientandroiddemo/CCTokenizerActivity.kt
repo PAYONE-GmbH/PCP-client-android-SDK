@@ -32,7 +32,7 @@ class CCTokenizerActivity : BaseActivity() {
         submitButton = SubmitButtonConfig(
             selector = "#submit",
         ),
-        environment = "test",
+        mode = "test",
         token = token,
         tokenizationSuccessCallback = { statusCode, token, cardDetails, inputMode ->
             android.util.Log.d("CC Success", "Tokenized card successfully")
