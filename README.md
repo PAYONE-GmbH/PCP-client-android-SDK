@@ -56,7 +56,7 @@ In order to use the SDK your minimum SDK Version needs to be at least API 34.
 
 ```kotlin
 dependencies {
-    implementation("io.github.payone-gmbh:pcp-client-android-sdk:1.2.0")
+    implementation("io.github.payone-gmbh:pcp-client-android-sdk:1.3.0")
 }
 ```
 
