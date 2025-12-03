@@ -20,24 +20,28 @@ class CCTokenizerActivity : BaseActivity() {
         fieldErrorCodeColor = "green"
     )
 
+    private val jwtToken = "<Token to be retrieved from the CommercePlatform-API>"
+
     private val config = CreditcardTokenizerConfig(
         iframe = IframeConfig(
             iframeWrapperId = "payment-IFrame",
-            height = 400,
+            height = "auto",
             width = 400
         ),
         uiConfig = uiConfig,
         locale = "de_DE",
         submitButton = SubmitButtonConfig(
             selector = "#submit",
-            element = null
         ),
         environment = "test",
-        tokenizationSuccessCallback = { statusCode, token, cardDetails ->
+        token = jwtToken,
+        tokenizationSuccessCallback = { statusCode, token, cardDetails, inputMode ->
             android.util.Log.d("CC Success", "Tokenized card successfully")
             android.util.Log.d("CC Success", "Status: $statusCode")
             android.util.Log.d("CC Success", "Token: $token")
             android.util.Log.d("CC Success", "Card Details: $cardDetails")
+            android.util.Log.d("CC Success", "InputMode: $inputMode")
+
         },
         tokenizationFailureCallback = { statusCode, errorResponse ->
             android.util.Log.e("CC Failure", "Tokenization of card failed")
@@ -46,7 +50,7 @@ class CCTokenizerActivity : BaseActivity() {
         }
     )
 
-    private val jwtToken = "<Token to be retrieved from the CommercePlatform-API>"
+
     private val tokenizerHtmlUrl = "https://path-to-your-server/creditcard-tokenizer.html"
     override fun onCreate(savedInstanceState: Bundle?) {
         headerTitle = "CC Tokenizer"
@@ -61,7 +65,6 @@ class CCTokenizerActivity : BaseActivity() {
         btnStart.setOnClickListener {
             val fragment = CreditcardTokenizerFragment.newInstance(
                 config,
-                jwtToken,
                 tokenizerHtmlUrl
             )
             supportFragmentManager.beginTransaction().replace(
