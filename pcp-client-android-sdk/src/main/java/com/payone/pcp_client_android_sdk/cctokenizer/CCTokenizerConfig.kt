@@ -66,7 +66,7 @@ data class UIConfig(
 // Iframe config for the payment form
 data class IframeConfig(
     val iframeWrapperId: String,
-    val height: Any? = null, // Int or "auto"
+    val height: Int? = null,
     val width: Int? = null,
     val zIndex: Int? = null
 ) : Serializable

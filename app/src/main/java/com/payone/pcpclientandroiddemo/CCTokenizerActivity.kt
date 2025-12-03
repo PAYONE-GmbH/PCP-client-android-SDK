@@ -25,7 +25,6 @@ class CCTokenizerActivity : BaseActivity() {
     private val config = CreditcardTokenizerConfig(
         iframe = IframeConfig(
             iframeWrapperId = "payment-IFrame",
-            height = "auto",
             width = 400
         ),
         uiConfig = uiConfig,
