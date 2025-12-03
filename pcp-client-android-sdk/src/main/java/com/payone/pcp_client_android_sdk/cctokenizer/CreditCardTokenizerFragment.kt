@@ -117,10 +117,6 @@ class CreditcardTokenizerFragment : Fragment() {
         webView.settings.domStorageEnabled = true
         webView.webViewClient = WebViewClient()
         webView.webChromeClient = WebChromeClient()
-       // log config
-        Log.d("CCTokenizer", "Using config: $config")
-        // log token
-        Log.d("CCTokenizer", "Using token: ${config.token}")
         webView.settings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
         webView.addJavascriptInterface(WebAppInterface(handler, ::makeScriptToPopulateHTML, config), "AndroidInterface")
         webView.webViewClient = object : WebViewClient() {
