@@ -144,13 +144,6 @@ data class LocaleTextConfig(
     val errors: LocaleTextErrors? = null
 ) : Serializable
 
-// Custom text config with multiple locales
-data class CustomTextConfig(
-    val en: LocaleTextConfig? = null,
-    val de: LocaleTextConfig? = null,
-    val locales: Map<String, LocaleTextConfig>? = null // For additional locales
-) : Serializable
-
 // Card details returned on successful tokenization
 data class CardDetails(
     val cardholderName: String,
@@ -167,7 +160,7 @@ data class CreditcardTokenizerConfig(
     val token: String,
     val mode: String? = null, // "test" or "live"
     val allowedCardSchemes: List<String>? = null, // e.g., "amex", "visa", "mastercard", etc.
-    val customTextConfig: CustomTextConfig? = null,
+    val customTextConfig: Map<String, LocaleTextConfig>? = null,
     val submitButton: SubmitButtonConfig,
     val tokenizationSuccessCallback: (statusCode: Int, token: String, cardDetails: CardDetails, inputMode: String) -> Unit,
     val tokenizationFailureCallback: (statusCode: Int, errorResponse: Map<String, Any?>) -> Unit,
