@@ -20,7 +20,7 @@ class CCTokenizerActivity : BaseActivity() {
         fieldErrorCodeColor = "green"
     )
 
-    private val jwtToken = "<Token to be retrieved from the CommercePlatform-API>"
+    private val token = "<Token to be retrieved from the CommercePlatform-API>"
 
     private val config = CreditcardTokenizerConfig(
         iframe = IframeConfig(
@@ -34,7 +34,7 @@ class CCTokenizerActivity : BaseActivity() {
             selector = "#submit",
         ),
         environment = "test",
-        token = jwtToken,
+        token = token,
         tokenizationSuccessCallback = { statusCode, token, cardDetails, inputMode ->
             android.util.Log.d("CC Success", "Tokenized card successfully")
             android.util.Log.d("CC Success", "Status: $statusCode")

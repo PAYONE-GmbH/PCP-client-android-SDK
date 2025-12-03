@@ -17,7 +17,7 @@ Welcome to the PAYONE Commerce Platform Client Android SDK for the PAYONE Commer
         - [1. Add the HTML page](#1-add-the-html-page)
         - [2. Imports for CreditCardTokenizer](#2-imports-for-creditcardtokenizer)
         - [3. Configure the Tokenizer](#3-configure-the-tokenizer)
-        - [4. Fetch the JWT Token from your Backend](#4-fetch-the-jwt-token-from-your-backend)
+        - [4. Fetch the JWT from your Backend](#4-fetch-the-jwt-token-from-your-backend)
         - [5. Host and load the HTML page](#5-host-and-load-the-html-page)
         - [6. Initialize the Tokenizer](#6-initialize-the-tokenizer)
         - [7. Customization and Callbacks](#7-customization-and-callbacks)
@@ -229,12 +229,12 @@ val config = CreditcardTokenizerConfig(
 )
 ```
 
-#### 4. Fetch the JWT Token from your Backend
+#### 4. Fetch the JWT from your Backend
 
 You must fetch the JWT from your backend before initializing the SDK.
 
 ```kotlin
-val jwtToken = fetchJwtTokenFromBackend() // Implement this in your backend
+val token = fetchJwtFromBackend() // Implement this in your backend
 ```
 
 #### 5. Host and load the HTML page
@@ -293,7 +293,6 @@ android:networkSecurityConfig="@xml/network_security_config"
 ```kotlin
 val fragment = CreditcardTokenizerFragment.newInstance(
     config,
-    jwtToken,
     "https://<your-server-address>/creditcard-tokenizer-example.html" // Use your actual server address
 )
 supportFragmentManager.beginTransaction().replace(R.id.fragment_container, fragment)
