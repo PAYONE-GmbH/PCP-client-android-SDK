@@ -58,7 +58,7 @@ mavenPublishing {
 
     signAllPublications()
 
-    coordinates("io.github.payone-gmbh", "pcp-client-android-sdk", "1.2.0")
+    coordinates("io.github.payone-gmbh", "pcp-client-android-sdk", "1.3.0")
 
     pom {
         name.set("PCP-CLIENT-SDK-ANDROID")
