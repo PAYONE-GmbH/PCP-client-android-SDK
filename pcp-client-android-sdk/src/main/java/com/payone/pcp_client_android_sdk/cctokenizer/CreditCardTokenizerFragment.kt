@@ -32,24 +32,20 @@ import kotlinx.serialization.json.Json
 class CreditcardTokenizerFragment : Fragment() {
     private lateinit var webView: WebView
     private lateinit var config: CreditcardTokenizerConfig
-    private lateinit var jwtToken: String
     private lateinit var tokenizerHtmlUrl: String
 
     private val handler = Handler(Looper.getMainLooper())
 
     companion object {
         private const val ARG_CONFIG = "config"
-        private const val ARG_JWT_TOKEN = "jwtToken"
         private const val ARG_TOKENIZER_HTML_URL = "tokenizerHtmlUrl"
         fun newInstance(
             config: CreditcardTokenizerConfig,
-            jwtToken: String,
             tokenizerHtmlUrl: String
         ): CreditcardTokenizerFragment {
             return CreditcardTokenizerFragment().apply {
                 arguments = Bundle().apply {
                     putSerializable(ARG_CONFIG, config)
-                    putString(ARG_JWT_TOKEN, jwtToken)
                     putString(ARG_TOKENIZER_HTML_URL, tokenizerHtmlUrl)
                 }
             }
@@ -68,7 +64,6 @@ class CreditcardTokenizerFragment : Fragment() {
         webView = view.findViewById(R.id.webView)
         arguments?.let {
             tokenizerHtmlUrl = it.getString(ARG_TOKENIZER_HTML_URL) ?: ""
-            jwtToken = it.getString(ARG_JWT_TOKEN) ?: ""
             config = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 it.getSerializable(ARG_CONFIG, CreditcardTokenizerConfig::class.java)
                     ?: throw IllegalArgumentException("Config cannot be null")
@@ -100,10 +95,10 @@ class CreditcardTokenizerFragment : Fragment() {
         }
 
         @JavascriptInterface
-        fun onTokenizationSuccess(statusCode: Int, token: String, cardDetailsJson: String) {
+        fun onTokenizationSuccess(statusCode: Int, token: String, cardDetailsJson: String, inputMode: String) {
             handler.post {
-                val cardDetails: Map<String, Any?> = Gson().fromJson(cardDetailsJson, Map::class.java) as Map<String, Any?>
-                config.tokenizationSuccessCallback?.invoke(statusCode, token, cardDetails)
+                val cardDetails: CardDetails = Gson().fromJson(cardDetailsJson, CardDetails::class.java)
+                config.tokenizationSuccessCallback?.invoke(statusCode, token, cardDetails, inputMode)
             }
         }
 
@@ -142,15 +137,15 @@ class CreditcardTokenizerFragment : Fragment() {
     private fun makeScriptToLoadPayoneHostedScript() {
         val sdkScriptEnv = mapOf(
             "test" to mapOf(
-                "src" to "https://sdk.preprod.tokenization.secure.payone.com/1.0.1/hosted-tokenization-sdk.js",
-                "integrity" to "sha384-Ec6OPQvn8poHUzTwcUYWC/pwd5wgVuVB+jKl+Eml5MWou154pm6j2MdhhJb9uqML"
+                "src" to "https://sdk.preprod.tokenization.secure.payone.com/1.3.0/hosted-tokenization-sdk.js",
+                "integrity" to "sha384-2mqrh4mWkGZN9XmQeJFzKX5t+i9at3NYnUT9qvS2GiMRe8a6pigcsaxGh5y7KwbG"
             ),
             "live" to mapOf(
-                "src" to "https://sdk.tokenization.secure.payone.com/1.0.1/hosted-tokenization-sdk.js",
-                "integrity" to "sha384-Ec6OPQvn8poHUzTwcUYWC/pwd5wgVuVB+jKl+Eml5MWou154pm6j2MdhhJb9uqML"
+                "src" to "https://sdk.tokenization.secure.payone.com/1.3.0/hosted-tokenization-sdk.js",
+                "integrity" to "sha384-2mqrh4mWkGZN9XmQeJFzKX5t+i9at3NYnUT9qvS2GiMRe8a6pigcsaxGh5y7KwbG"
             )
         )
-        val env = config.environment ?: "test"
+        val env = config.mode ?: "test"
         val scriptInfo = sdkScriptEnv[env] ?: sdkScriptEnv["test"]!!
         val scriptSrc = scriptInfo["src"]
         val scriptIntegrity = scriptInfo["integrity"]
@@ -181,18 +176,33 @@ class CreditcardTokenizerFragment : Fragment() {
     }
 
     private fun makeScriptToPopulateHTML() {
-        val gson = Gson()
-        val uiConfigJson = gson.toJson(config.uiConfig)
-        val iframeConfigJson = gson.toJson(config.iframe)
+        val gson = Gson()        
+        // Build iframe config with defaults
+        val iframeConfig = mapOf(
+            "iframeWrapperId" to config.iframe.iframeWrapperId,
+            "height" to (config.iframe.height ?: "auto"),
+            "width" to (config.iframe.width ?: 400),
+            "zIndex" to (config.iframe.zIndex ?: 9999)
+        )        
+        val uiConfigJson = gson.toJson(config.uiConfig ?: emptyMap<String, Any>())
+        val iframeConfigJson = gson.toJson(iframeConfig)
+        val customTextConfigJson = gson.toJson(config.customTextConfig)
+        val allowedCardSchemesJson = gson.toJson(config.allowedCardSchemes)
         val locale = config.locale ?: "de_DE"
-        val submitButtonSelector = config.submitButton?.selector ?: "#submit"
+        val token = config.token
+        val mode = config.mode ?: "test"
+        val submitButtonSelector = config.submitButton.selector ?: "#submit"
+    
         webView.evaluateJavascript(
             """
         var sdkConfig = {
             iframe: $iframeConfigJson,
             uiConfig: $uiConfigJson,
             locale: '$locale',
-            token: '$jwtToken'
+            token: '$token',
+            mode: '$mode',
+            allowedCardSchemes: $allowedCardSchemesJson,
+            customTextConfig: $customTextConfigJson
         };
         if (window.HostedTokenizationSdk) {
             window.HostedTokenizationSdk.init().then(function() {
@@ -201,7 +211,7 @@ class CreditcardTokenizerFragment : Fragment() {
                 if (submitBtn) {
                     submitBtn.onclick = function() {
                         window.HostedTokenizationSdk.submitForm(
-                            (statusCode, token, cardDetails) => window.AndroidInterface.onTokenizationSuccess(statusCode, token, JSON.stringify(cardDetails)),
+                            (statusCode, token, cardDetails, inputMode) => window.AndroidInterface.onTokenizationSuccess(statusCode, token, JSON.stringify(cardDetails), inputMode),
                             (statusCode, errorResponse) => window.AndroidInterface.onTokenizationFailure(statusCode, JSON.stringify(errorResponse))
                         );
                     };
