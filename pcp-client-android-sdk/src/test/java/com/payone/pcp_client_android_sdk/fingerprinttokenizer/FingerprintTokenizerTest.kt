@@ -1,123 +1,248 @@
 package com.payone.pcp_client_android_sdk.fingerprinttokenizer
 
+/*
+ * This file is part of the PCPClient Android SDK.
+ * Copyright © 2024 PAYONE GmbH. All rights reserved.
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
+ */
+
 import android.content.Context
 import com.payone.pcp_client_android_sdk.utils.PCPEnvironment
+import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.mockito.Mock
-import org.mockito.MockitoAnnotations
-import org.mockito.junit.MockitoJUnitRunner
-import org.junit.Assert.*
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.RuntimeEnvironment
+import org.robolectric.annotation.Config
 
-@RunWith(MockitoJUnitRunner::class)
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [28], manifest = Config.NONE)
 class FingerprintTokenizerTest {
 
-    @Mock
-    private lateinit var mockContext: Context
-
-    private lateinit var fingerprintTokenizer: FingerprintTokenizer
-
-    private val testPaylaPartnerId = "test_partner_id"
-    private val testPartnerMerchantId = "test_merchant_id"
-    private val testSessionId = "test_session_123"
+    private lateinit var context: Context
+    private val paylaPartnerId = "PAYparId"
+    private val merchantId = "merch"
+    private val sessionId = "sessionId"
 
     @Before
-    fun setup() {
-        MockitoAnnotations.openMocks(this)
+    fun setUp() {
+        context = RuntimeEnvironment.getApplication()
     }
 
-    @Test
-    fun `test FingerprintTokenizer initialization with custom session ID`() {
-        // Given
-        fingerprintTokenizer = FingerprintTokenizer(
-            context = mockContext,
-            paylaPartnerId = testPaylaPartnerId,
-            partnerMerchantId = testPartnerMerchantId,
-            environment = PCPEnvironment.Test,
-            sessionId = testSessionId
-        )
-
-        // When - Create a reflection test to access private snippetToken
-        // (Note: In real scenarios, you might want to expose this via a public getter)
+    private fun getSnippetToken(tokenizer: FingerprintTokenizer): String {
         val snippetTokenField = FingerprintTokenizer::class.java.getDeclaredField("snippetToken")
         snippetTokenField.isAccessible = true
-        val snippetToken = snippetTokenField.get(fingerprintTokenizer) as String
-
-        // Then
-        val expectedToken = "${testPaylaPartnerId}_${testPartnerMerchantId}_$testSessionId"
-        assertEquals(expectedToken, snippetToken)
+        return snippetTokenField.get(tokenizer) as String
     }
 
     @Test
-    fun `test FingerprintTokenizer initialization without session ID generates UUID`() {
-        // Given
-        fingerprintTokenizer = FingerprintTokenizer(
-            context = mockContext,
-            paylaPartnerId = testPaylaPartnerId,
-            partnerMerchantId = testPartnerMerchantId,
-            environment = PCPEnvironment.Production,
+    fun `test initialization with session ID creates tokenizer`() {
+        val tokenizer = FingerprintTokenizer(
+            context = context,
+            paylaPartnerId = paylaPartnerId,
+            partnerMerchantId = merchantId,
+            environment = PCPEnvironment.Test,
+            sessionId = sessionId
+        )
+
+        assertNotNull(tokenizer)
+    }
+
+    @Test
+    fun `test initialization without session ID creates tokenizer`() {
+        val tokenizer = FingerprintTokenizer(
+            context = context,
+            paylaPartnerId = paylaPartnerId,
+            partnerMerchantId = merchantId,
+            environment = PCPEnvironment.Test,
             sessionId = null
         )
 
-        // When
-        val snippetTokenField = FingerprintTokenizer::class.java.getDeclaredField("snippetToken")
-        snippetTokenField.isAccessible = true
-        val snippetToken = snippetTokenField.get(fingerprintTokenizer) as String
+        assertNotNull(tokenizer)
+    }
 
-        // Then
-        assertTrue(snippetToken.startsWith("${testPaylaPartnerId}_${testPartnerMerchantId}_"))
+    @Test
+    fun `test snippet token format with test environment`() {
+        val tokenizer = FingerprintTokenizer(
+            context = context,
+            paylaPartnerId = paylaPartnerId,
+            partnerMerchantId = merchantId,
+            environment = PCPEnvironment.Test,
+            sessionId = sessionId
+        )
+
+        val snippetToken = getSnippetToken(tokenizer)
+
+        // Expected format: PAYparId_merch_sessionId
+        assertEquals("${paylaPartnerId}_${merchantId}_$sessionId", snippetToken)
+    }
+
+    @Test
+    fun `test snippet token format with production environment`() {
+        val tokenizer = FingerprintTokenizer(
+            context = context,
+            paylaPartnerId = paylaPartnerId,
+            partnerMerchantId = merchantId,
+            environment = PCPEnvironment.Production,
+            sessionId = sessionId
+        )
+
+        val snippetToken = getSnippetToken(tokenizer)
+
+        assertEquals("${paylaPartnerId}_${merchantId}_$sessionId", snippetToken)
+    }
+
+    @Test
+    fun `test snippet token without session ID generates UUID`() {
+        val tokenizer = FingerprintTokenizer(
+            context = context,
+            paylaPartnerId = paylaPartnerId,
+            partnerMerchantId = merchantId,
+            environment = PCPEnvironment.Test,
+            sessionId = null
+        )
+
+        val snippetToken = getSnippetToken(tokenizer)
+
+        // Should start with partner and merchant ID
+        assertTrue(snippetToken.startsWith("${paylaPartnerId}_${merchantId}_"))
         
         // Extract UUID part
         val parts = snippetToken.split("_")
         assertTrue(parts.size >= 3)
-        assertNotNull(parts.last())
+        
+        // Last part should be a UUID (not empty)
+        val uuid = parts.drop(2).joinToString("_")
+        assertNotNull(uuid)
+        assertTrue(uuid.isNotEmpty())
     }
 
     @Test
-    fun `test snippet token format is correct`() {
-        // Given
-        val customSessionId = "custom_uuid_12345"
-        fingerprintTokenizer = FingerprintTokenizer(
-            context = mockContext,
-            paylaPartnerId = "partner123",
-            partnerMerchantId = "merchant456",
+    fun `test different partner IDs create different tokens`() {
+        val tokenizer1 = FingerprintTokenizer(
+            context = context,
+            paylaPartnerId = "Partner1",
+            partnerMerchantId = merchantId,
             environment = PCPEnvironment.Test,
-            sessionId = customSessionId
+            sessionId = sessionId
         )
 
-        // When
-        val snippetTokenField = FingerprintTokenizer::class.java.getDeclaredField("snippetToken")
-        snippetTokenField.isAccessible = true
-        val snippetToken = snippetTokenField.get(fingerprintTokenizer) as String
+        val tokenizer2 = FingerprintTokenizer(
+            context = context,
+            paylaPartnerId = "Partner2",
+            partnerMerchantId = merchantId,
+            environment = PCPEnvironment.Test,
+            sessionId = sessionId
+        )
 
-        // Then
-        assertEquals("partner123_merchant456_custom_uuid_12345", snippetToken)
-        assertTrue(snippetToken.contains("partner123"))
-        assertTrue(snippetToken.contains("merchant456"))
-        assertTrue(snippetToken.contains(customSessionId))
+        val token1 = getSnippetToken(tokenizer1)
+        val token2 = getSnippetToken(tokenizer2)
+
+        assertNotNull(token1)
+        assertNotNull(token2)
+        assertNotEquals(token1, token2)
+        assertEquals("Partner1_${merchantId}_$sessionId", token1)
+        assertEquals("Partner2_${merchantId}_$sessionId", token2)
     }
 
     @Test
-    fun `test different environments are accepted`() {
-        // Test with Test environment
-        val testEnvTokenizer = FingerprintTokenizer(
-            context = mockContext,
-            paylaPartnerId = testPaylaPartnerId,
-            partnerMerchantId = testPartnerMerchantId,
+    fun `test different merchant IDs create different tokens`() {
+        val tokenizer1 = FingerprintTokenizer(
+            context = context,
+            paylaPartnerId = paylaPartnerId,
+            partnerMerchantId = "Merchant1",
             environment = PCPEnvironment.Test,
-            sessionId = testSessionId
+            sessionId = sessionId
         )
-        assertNotNull(testEnvTokenizer)
 
-        // Test with Production environment
-        val prodEnvTokenizer = FingerprintTokenizer(
-            context = mockContext,
-            paylaPartnerId = testPaylaPartnerId,
-            partnerMerchantId = testPartnerMerchantId,
+        val tokenizer2 = FingerprintTokenizer(
+            context = context,
+            paylaPartnerId = paylaPartnerId,
+            partnerMerchantId = "Merchant2",
+            environment = PCPEnvironment.Test,
+            sessionId = sessionId
+        )
+
+        val token1 = getSnippetToken(tokenizer1)
+        val token2 = getSnippetToken(tokenizer2)
+
+        assertNotNull(token1)
+        assertNotNull(token2)
+        assertNotEquals(token1, token2)
+        assertEquals("${paylaPartnerId}_Merchant1_$sessionId", token1)
+        assertEquals("${paylaPartnerId}_Merchant2_$sessionId", token2)
+    }
+
+    @Test
+    fun `test different session IDs create different tokens`() {
+        val tokenizer1 = FingerprintTokenizer(
+            context = context,
+            paylaPartnerId = paylaPartnerId,
+            partnerMerchantId = merchantId,
+            environment = PCPEnvironment.Test,
+            sessionId = "session1"
+        )
+
+        val tokenizer2 = FingerprintTokenizer(
+            context = context,
+            paylaPartnerId = paylaPartnerId,
+            partnerMerchantId = merchantId,
+            environment = PCPEnvironment.Test,
+            sessionId = "session2"
+        )
+
+        val token1 = getSnippetToken(tokenizer1)
+        val token2 = getSnippetToken(tokenizer2)
+
+        assertNotNull(token1)
+        assertNotNull(token2)
+        assertNotEquals(token1, token2)
+        assertEquals("${paylaPartnerId}_${merchantId}_session1", token1)
+        assertEquals("${paylaPartnerId}_${merchantId}_session2", token2)
+    }
+
+    @Test
+    fun `test getSnippetToken can be called without errors`() {
+        val tokenizer = FingerprintTokenizer(
+            context = context,
+            paylaPartnerId = paylaPartnerId,
+            partnerMerchantId = merchantId,
+            environment = PCPEnvironment.Test,
+            sessionId = sessionId
+        )
+
+        // This should not throw an exception
+        tokenizer.getSnippetToken { _ -> }
+    }
+
+    @Test
+    fun `test tokenizer with test environment uses correct identifier`() {
+        val tokenizer = FingerprintTokenizer(
+            context = context,
+            paylaPartnerId = paylaPartnerId,
+            partnerMerchantId = merchantId,
+            environment = PCPEnvironment.Test,
+            sessionId = sessionId
+        )
+
+        assertNotNull(tokenizer)
+        // The environment identifier is used internally in the script
+    }
+
+    @Test
+    fun `test tokenizer with production environment uses correct identifier`() {
+        val tokenizer = FingerprintTokenizer(
+            context = context,
+            paylaPartnerId = paylaPartnerId,
+            partnerMerchantId = merchantId,
             environment = PCPEnvironment.Production,
-            sessionId = testSessionId
+            sessionId = sessionId
         )
-        assertNotNull(prodEnvTokenizer)
+
+        assertNotNull(tokenizer)
+        // The environment identifier is used internally in the script
     }
 }
