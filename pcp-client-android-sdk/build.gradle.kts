@@ -46,6 +46,8 @@ dependencies {
     implementation(libs.kotlinx.serialization)
     testImplementation(libs.junit)
     testImplementation(libs.mockito.core)
+    testImplementation("org.robolectric:robolectric:4.11.1")
+    testImplementation("androidx.test:core:1.5.0")
     androidTestImplementation(libs.mockito.android)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.runner)
