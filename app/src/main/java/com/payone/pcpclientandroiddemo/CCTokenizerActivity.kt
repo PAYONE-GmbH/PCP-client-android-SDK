@@ -6,6 +6,7 @@ import com.payone.pcp_client_android_sdk.cctokenizer.CardNumberErrors
 import com.payone.pcp_client_android_sdk.cctokenizer.CardholderNameErrors
 import com.payone.pcp_client_android_sdk.cctokenizer.CreditcardTokenizerConfig
 import com.payone.pcp_client_android_sdk.cctokenizer.CreditcardTokenizerFragment
+import com.payone.pcp_client_android_sdk.cctokenizer.CustomIconsConfig
 import com.payone.pcp_client_android_sdk.cctokenizer.ExpiryDateErrors
 import com.payone.pcp_client_android_sdk.cctokenizer.IframeConfig
 import com.payone.pcp_client_android_sdk.cctokenizer.LocaleTextAriaLabels
@@ -145,6 +146,12 @@ class CCTokenizerActivity : BaseActivity() {
         mode = "test",
         token = token,
         customTextConfig = customTextConfig,
+        customIconsConfig = CustomIconsConfig(
+            useCustomValidationIcons = true,
+            showCardBrandIcons = false,
+            successIcon = "/validIcon.svg",
+            errorIcon = "/invalidIcon.svg"
+        ),
         tokenizationSuccessCallback = { statusCode, token, cardDetails, inputMode ->
             android.util.Log.d("CC Success", "Tokenized card successfully")
             android.util.Log.d("CC Success", "Status: $statusCode")
