@@ -21,6 +21,8 @@ Welcome to the PAYONE Commerce Platform Client Android SDK for the PAYONE Commer
         - [5. Host and load the HTML page](#5-host-and-load-the-html-page)
         - [6. Initialize the Tokenizer](#6-initialize-the-tokenizer)
         - [7. Customization and Callbacks](#7-customization-and-callbacks)
+            - [Custom Validation Icons (v1.4)](#custom-validation-icons-v14)
+            - [Click to Pay / CTP (v1.4)](#click-to-pay--ctp-v14)
         - [8. PCI DSS & Security](#8-pci-dss--security)
         - [9. Migration Note](#9-migration-note)
     - [Fingerprint Tokenizer](#fingerprint-tokenizer)
@@ -56,7 +58,7 @@ In order to use the SDK your minimum SDK Version needs to be at least API 34.
 
 ```kotlin
 dependencies {
-    implementation("io.github.payone-gmbh:pcp-client-android-sdk:1.3.0")
+    implementation("io.github.payone-gmbh:pcp-client-android-sdk:1.4.0")
 }
 ```
 
@@ -307,7 +309,69 @@ supportFragmentManager.beginTransaction().replace(R.id.fragment_container, fragm
 - `submitButton`: Provide a selector or element for the submit button.
 - `tokenizationSuccessCallback`: Handle the token and card details on success.
 - `tokenizationFailureCallback`: Handle errors on failure.
-- `environment`: Choose "test" or "live" for the SDK environment.
+- `mode`: Choose `"test"` or `"live"` for the SDK environment.
+- `allowedCardSchemes`: Limit accepted card brands (e.g. `listOf("visa", "mastercard")`). All brands accepted when omitted.
+- `customTextConfig`: Override labels, placeholders, aria-labels and validation error messages per locale key (e.g. `"en"`, `"de"`).
+
+##### Custom Validation Icons (v1.4)
+
+Provide your own success/error icons for input validation. Supported formats: SVG, PNG, JPEG, WebP.
+
+```kotlin
+import com.payone.pcp_client_android_sdk.cctokenizer.CustomIconsConfig
+
+val config = CreditcardTokenizerConfig(
+    // ... other fields ...
+    customIconsConfig = CustomIconsConfig(
+        useCustomValidationIcons = true,
+        showCardBrandIcons = false,   // true = show detected card brand instead of validation icon
+        successIcon = "/validIcon.svg",
+        errorIcon = "/invalidIcon.svg"
+    ),
+    // ...
+)
+```
+
+##### Click to Pay / CTP (v1.4)
+
+Enable Click to Pay (wallet-based payment by card schemes). Requires onboarding with PAYONE for Visa and/or Mastercard credentials.
+
+```kotlin
+import com.payone.pcp_client_android_sdk.cctokenizer.CTPConfig
+import com.payone.pcp_client_android_sdk.cctokenizer.SchemeConfig
+import com.payone.pcp_client_android_sdk.cctokenizer.VisaConfig
+import com.payone.pcp_client_android_sdk.cctokenizer.MastercardConfig
+import com.payone.pcp_client_android_sdk.cctokenizer.TransactionAmount
+import com.payone.pcp_client_android_sdk.cctokenizer.CTPUiConfig
+
+val config = CreditcardTokenizerConfig(
+    // ... other fields ...
+    ctpConfig = CTPConfig(
+        enableCTP = true,
+        enableCustomerOnboarding = true,
+        schemeConfig = SchemeConfig(
+            merchantPresentationName = "YourMerchantName",
+            visaConfig = VisaConfig(
+                srcInitiatorId = "YOUR_VISA_INITIATOR_ID",
+                srcDpaId = "YOUR_VISA_DPA_ID",
+                encryptionKey = "YOUR_ENCRYPTION_KEY",
+                nModulus = "YOUR_N_MODULUS"
+            ),
+            mastercardConfig = MastercardConfig(
+                srcInitiatorId = "YOUR_MC_INITIATOR_ID",
+                srcDpaId = "YOUR_MC_DPA_ID"
+            )
+        ),
+        transactionAmount = TransactionAmount(amount = "100", currencyCode = "EUR"),
+        uiConfig = CTPUiConfig(
+            buttonStyle = "solid",
+            buttonAndBadgeColor = "#3B82F6",
+            fontFamily = "Sansation"
+        )
+    ),
+    // ...
+)
+```
 
 #### 8. PCI DSS & Security
 

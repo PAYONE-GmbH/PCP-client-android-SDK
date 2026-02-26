@@ -137,12 +137,12 @@ class CreditcardTokenizerFragment : Fragment() {
     private fun makeScriptToLoadPayoneHostedScript() {
         val sdkScriptEnv = mapOf(
             "test" to mapOf(
-                "src" to "https://sdk.preprod.tokenization.secure.payone.com/1.3.0/hosted-tokenization-sdk.js",
-                "integrity" to "sha384-2mqrh4mWkGZN9XmQeJFzKX5t+i9at3NYnUT9qvS2GiMRe8a6pigcsaxGh5y7KwbG"
+                "src" to "https://sdk.preprod.tokenization.secure.payone.com/1.4.0/hosted-tokenization-sdk.js",
+                "integrity" to "sha384-gLgHigakYvqqMAmx6FuAl2EaUoWvG24i0xCyDH8YC7+mWpqgFjuzPM0xD3orrMZ4"
             ),
             "live" to mapOf(
-                "src" to "https://sdk.tokenization.secure.payone.com/1.3.0/hosted-tokenization-sdk.js",
-                "integrity" to "sha384-2mqrh4mWkGZN9XmQeJFzKX5t+i9at3NYnUT9qvS2GiMRe8a6pigcsaxGh5y7KwbG"
+                "src" to "https://sdk.tokenization.secure.payone.com/1.4.0/hosted-tokenization-sdk.js",
+                "integrity" to "sha384-gLgHigakYvqqMAmx6FuAl2EaUoWvG24i0xCyDH8YC7+mWpqgFjuzPM0xD3orrMZ4"
             )
         )
         val env = config.mode ?: "test"
@@ -176,23 +176,35 @@ class CreditcardTokenizerFragment : Fragment() {
     }
 
     private fun makeScriptToPopulateHTML() {
-        val gson = Gson()        
+        val gson = Gson()
         // Build iframe config with defaults
         val iframeConfig = mapOf(
             "iframeWrapperId" to config.iframe.iframeWrapperId,
             "height" to (config.iframe.height ?: "auto"),
             "width" to (config.iframe.width ?: 400),
             "zIndex" to (config.iframe.zIndex ?: 9999)
-        )        
+        )
         val uiConfigJson = gson.toJson(config.uiConfig ?: emptyMap<String, Any>())
         val iframeConfigJson = gson.toJson(iframeConfig)
         val customTextConfigJson = gson.toJson(config.customTextConfig)
         val allowedCardSchemesJson = gson.toJson(config.allowedCardSchemes)
+        val customIconsConfigJson = gson.toJson(config.customIconsConfig)
+        val ctpConfigJson = gson.toJson(config.ctpConfig)
         val locale = config.locale ?: "de_DE"
         val token = config.token
         val mode = config.mode ?: "test"
         val submitButtonSelector = config.submitButton.selector ?: "#submit"
-    
+
+        // Build optional fields snippet: only include non-null optional top-level properties
+        val optionalFields = buildString {
+            if (config.customIconsConfig != null) {
+                append("    customIconsConfig: $customIconsConfigJson,\n")
+            }
+            if (config.ctpConfig != null) {
+                append("    CTPConfig: $ctpConfigJson,\n")
+            }
+        }
+
         webView.evaluateJavascript(
             """
         var sdkConfig = {
@@ -202,7 +214,8 @@ class CreditcardTokenizerFragment : Fragment() {
             token: '$token',
             mode: '$mode',
             allowedCardSchemes: $allowedCardSchemesJson,
-            customTextConfig: $customTextConfigJson
+            customTextConfig: $customTextConfigJson,
+            $optionalFields
         };
         if (window.HostedTokenizationSdk) {
             window.HostedTokenizationSdk.init().then(function() {
@@ -218,7 +231,7 @@ class CreditcardTokenizerFragment : Fragment() {
                 }
             }).catch(function(error) {
                 console.error('Error initializing Hosted Tokenization SDK:', error);
-                window.AndroidInterface.onScriptError(); 
+                window.AndroidInterface.onScriptError();
             });
         }
         """.trimIndent()

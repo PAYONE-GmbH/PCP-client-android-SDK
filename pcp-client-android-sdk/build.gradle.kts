@@ -4,7 +4,7 @@ plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.jetbrains.kotlin.android)
     alias(libs.plugins.sonar)
-    kotlin("plugin.serialization") version "2.1.0"
+    kotlin("plugin.serialization") version libs.versions.kotlin.get()
     alias(libs.plugins.maven.publish)
 }
 
@@ -32,8 +32,10 @@ android {
         sourceCompatibility = JavaVersion.VERSION_1_8
         targetCompatibility = JavaVersion.VERSION_1_8
     }
-    kotlinOptions {
-        jvmTarget = "1.8"
+    kotlin {
+        compilerOptions {
+            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_1_8)
+        }
     }
 }
 
@@ -46,6 +48,8 @@ dependencies {
     implementation(libs.kotlinx.serialization)
     testImplementation(libs.junit)
     testImplementation(libs.mockito.core)
+    testImplementation("org.robolectric:robolectric:4.11.1")
+    testImplementation("androidx.test:core:1.5.0")
     androidTestImplementation(libs.mockito.android)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.runner)
@@ -58,7 +62,7 @@ mavenPublishing {
 
     signAllPublications()
 
-    coordinates("io.github.payone-gmbh", "pcp-client-android-sdk", "1.3.0")
+    coordinates("io.github.payone-gmbh", "pcp-client-android-sdk", "1.4.0")
 
     pom {
         name.set("PCP-CLIENT-SDK-ANDROID")
