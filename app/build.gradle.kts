@@ -51,6 +51,7 @@ android {
 }
 
 dependencies {
+    implementation("com.google.code.gson:gson:2.11.0")
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
@@ -64,11 +65,14 @@ dependencies {
     implementation(project(":pcp-client-android-sdk"))
     implementation(libs.androidx.constraintlayout)
     implementation("com.google.pay.button:compose-pay-button:1.1.0")
-    implementation("com.google.android.gms:play-services-wallet:19.3.0")
+    implementation("com.google.android.gms:play-services-wallet:20.0.0")
     implementation("com.paypal.android:paypal-web-payments:2.0.1")
     implementation("com.paypal.android:payment-buttons:2.0.1")
 
     testImplementation(libs.junit)
+    testImplementation("com.squareup.okhttp3:mockwebserver:4.12.0")
+    testImplementation("org.robolectric:robolectric:4.11.1")
+    testImplementation("androidx.test:core:1.5.0")
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))

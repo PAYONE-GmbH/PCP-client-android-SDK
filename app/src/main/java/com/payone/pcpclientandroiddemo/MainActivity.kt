@@ -17,6 +17,9 @@ class MainActivity : BaseActivity() {
         val fingerprintBtn = findViewById<Button>(R.id.fingerprint_button)
         val ccTokenizerBtn = findViewById<Button>(R.id.btnCCTokenizer)
         val googlePayBtn = findViewById<Button>(R.id.btnGooglePay)
+        findViewById<Button>(R.id.btnGooglePayExpress).setOnClickListener {
+            startActivity(Intent(this, com.payone.pcpclientandroiddemo.gpay.express.GooglePayExpressActivity::class.java))
+        }
         val payPalBtn = findViewById<Button>(R.id.btnPayPal)
 
         fingerprintBtn.setOnClickListener {

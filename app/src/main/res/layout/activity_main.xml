@@ -37,8 +37,15 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="24dp"
-        android:text="Start Google Pay" />
+        android:text="Google Pay Standard Checkout" />
 
+
+    <Button
+        android:id="@+id/btnGooglePayExpress"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:text="Google Pay Express Checkout" />
 
     <Button
         android:id="@+id/btnPayPal"
