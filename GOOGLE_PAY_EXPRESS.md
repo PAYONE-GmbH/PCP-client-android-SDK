@@ -16,18 +16,17 @@ Two separate pages share configurable checkout components. **Both create PCP che
 | Confirmation | Page displays checkout IDs and separately whether payment is authorized | Sheet succeeds only after confirmed backend authorization; page displays IDs/status |
 | Cancellation before submission | No checkout request; release local session | Same |
 
-Opening either page, checking readiness, changing delivery on the Standard page or dismissing the sheet does not create a checkout. A received Google Pay token or an HTTP 2xx response is not proof of payment authorization.
+Opening either page, checking readiness, changing delivery on the Standard page or dismissing the sheet does not create a checkout.
 
-**Checkout creation and payment execution are separate.** The demo defaults to `executePaymentOnCreation=false`: real Google Pay data is required and sent to PCP, but immediate payment execution is not requested. Both Android flows have created real product-320 checkouts with this configuration; the incomplete merchant payment setup does not prevent that test. For Express, the authorization callback still returns an error because creation alone is not payment authorization. Close the sheet to see the created checkout IDs; do not interpret that sheet error as failure to create the checkout.
+**Checkout creation and payment execution are separate.** The demo defaults to `executePaymentOnCreation=false`: Google Pay data is required and sent to PCP, but immediate payment execution is not requested.
 
-## Prerequisites and current external blocker
+## Prerequisites
 
 - Android minSdk 24, Google Play services, a Google Pay-capable device/account. The button is shown only after readiness succeeds.
 - Wallet **`com.google.android.gms:play-services-wallet:20.0.0`**, exposed by the SDK. Native Express callbacks require this API. The demo uses `com.google.pay.button:compose-pay-button:1.1.0`.
 - PAYONE Google Pay/product **320** must be enabled for the merchant and selected card networks. Gateway is `payonegmbh`; `gatewayMerchantId` is the PAYONE merchant ID, not a Google web merchant ID.
 - The existing test proxy is at `http://localhost:3009`; requests use `POST /api/commerce-cases`. `GET /ui/config` provides `merchantId` (currently `P1_18352_2013244`). Server credentials remain on the server. `GET /api/` can return 404 although the actual API routes work.
 - Both demo pages explicitly use Google `ENVIRONMENT_TEST`. Google TEST does not select the PAYONE environment: the proxy must independently target the intended PAYONE test environment. Production requires Google production access for the package/signing certificate and a corresponding PAYONE production setup.
-- The merchant owner reports incomplete PAYONE test-merchant configuration: the JavaScript integration can create checkouts but cannot complete payment. Exact missing settings/Google Pay enablement remain unknown. **Real Android payment success/decline verification remains blocked by that configuration.**
 
 ## Modules and responsibilities
 
@@ -142,7 +141,7 @@ client.loadPaymentData(request).addOnCompleteListener(paymentLauncher::launch)
 
 On a successful **Standard** result, parse `result.result.toJson()` with `GooglePayExpressPayment.fromStandardJson(json, selectedShopShippingOptionId)`, then submit it once to your backend. The shop option is mandatory because the Standard sheet does not select delivery. On cancellation/error, do not submit.
 
-For **Express**, the SDK service parses final payment data with `GooglePayExpressPayment.fromJson(json)` using the sheet's shipping option. The Activity must **not** submit the token again: backend submission already ran in the callback. A successful Google status must still correspond to a confirmed merchant outcome before your application displays payment success. With payment execution deferred, the sheet cannot report authorization success; close it after its payment-not-confirmed message to view the created checkout on the page.
+For **Express**, the SDK service parses final payment data with `GooglePayExpressPayment.fromJson(json)` using the sheet's shipping option. The Activity must **not** submit the token again: backend submission already ran in the callback.
 
 The validated model exposes `encryptedPaymentData`, `email`, `shippingAddressJson`, `billingAddressJson`, `shippingOptionId`. Missing token/full contact data fails before backend submission. Parser errors exclude the payment payload. Never log/persist tokens, full payment JSON or customer address data.
 
@@ -211,7 +210,7 @@ The actual request also includes checkout references, Google-derived customer bi
 
 **Required reference:** supplying commerce-case/checkout references alone is insufficient when `orderRequest` is present. PCP also requires `orderRequest.orderReferences.merchantReference`, with a maximum of **20 characters** (checkout references permit 40). The demo generates a fresh 20-character reference and uses it on all three levels. Missing order reference produced HTTP 400/code `50308003`; a 36-character UUID there produced HTTP 400/code `50102001`. Both errors previously prevented checkout creation before any payment could be attempted.
 
-With `autoExecuteOrder=false`, the tested backend stores a `paymentExecutions` resource containing `mobilePaymentMethodSpecificInput.paymentProductId=320` and the real Google Pay token, while the checkout remains `OPEN`. The presence of that resource is not evidence of an executed/authorized payment. The token-bearing input is intentionally not reproduced in logs or this guide. A later payment step must follow the documented PCP payment-execution lifecycle; no automatic retry/replay is performed by the app.
+With `autoExecuteOrder=false`, the backend stores a `paymentExecutions` resource containing `mobilePaymentMethodSpecificInput.paymentProductId=320` and the Google Pay token, while the checkout remains `OPEN`. A later payment step follows the PCP payment-execution lifecycle; no automatic retry/replay is performed by the app.
 
 Responses must provide valid `commerceCaseId` and `checkout.checkoutId`. The page can report these IDs as **checkout created with Google Pay**, even if the response does not confirm payment. Authorization additionally requires `checkout.paymentResponse.payment.id`, status `PENDING_CAPTURE` or `CAPTURED`, `statusOutput.isAuthorized=true`, and no checkout error or merchant action. Created/pending/rejected/redirect states and HTTP 2xx alone never count as authorized. Express returns a sheet error for an unconfirmed payment, while retaining available checkout IDs for reconciliation.
 
@@ -247,28 +246,13 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 
 Open **Google Pay Standard Checkout** or **Google Pay Express Checkout** from the demo home screen. For an emulator, `adb reverse` also works; alternatively set `backendUrl` to `http://10.0.2.2:3009/api/`. The demo's network security config permits these local hosts.
 
-Standard: select Standard (€10.00) or Express (€14.99) delivery before opening Google Pay; verify the final sheet amount. Express: open the sheet and switch delivery there; verify the total updates from €10.00 to €14.99. Cancel before confirmation to verify no checkout submission. To test creation now, keep `executePaymentOnCreation=false` and confirm the Google TEST sheet. Standard displays the created IDs; Express displays payment-not-confirmed in the sheet, then the created IDs after closing it. Verify the checkout with `GET /api/commerce-cases/{commerceCaseId}/checkouts/{checkoutId}` and inspect only safe product/status fields, not the returned token. After merchant setup is complete, explicitly set `executePaymentOnCreation=true` to test authorized versus declined payment behavior. No alternative tokenless checkout test path is provided.
+Standard: select Standard (€10.00) or Express (€14.99) delivery before opening Google Pay; verify the final sheet amount. Express: open the sheet and switch delivery there; verify the total updates from €10.00 to €14.99. Cancel before confirmation to verify no checkout submission. Use `executePaymentOnCreation=false` for deferred execution or `true` for immediate execution. Verify the checkout with `GET /api/commerce-cases/{commerceCaseId}/checkouts/{checkoutId}` and inspect only safe product/status fields, not the returned token.
 
-### Verification record (2026-11-05)
+### Automated checks
 
-- **90 tests passed, zero failures/errors/skips**: 74 SDK and 16 app tests, including 29 Google Pay/checkout tests and 61 existing regression tests. After the API-base change, both modules were rebuilt and both suites rerun using `--rerun-tasks`: all 90 tests passed. Tests cover API-at-root/custom prefixes with and without trailing slashes and separate `/ui/config` discovery. Lint passed before these app-only fixes, subject to the metadata limitation below.
-- Automated success/error/cancellation, Standard/Express request distinctions, exact token mapping, parameterized prices, backend HTTP contract, safe persistence and duplicate guards are tested with fixtures/MockWebServer/Robolectric. Fixture success is not a real authorization.
-- Existing tokenizer, fingerprint, environment and app regression unit tests are included. No end-to-end card/PayPal regression claim is made.
-- Real native Express sheet initialization, €10.00/€14.99 delivery updates and Back cancellation were verified on Samsung SM-A528B before the shared-page refactor.
-- The refactored APK was installed on that device. Home navigation opens separate Standard/Express pages; only Standard displays the delivery selector, and neither page has a tokenless creation button. An initial UI bug permanently disabled both buttons for a legacy `SUBMITTED` session. The fix distinguishes persisted outcome from an actually running request and retains the old reference in history. With the fix installed, tapping each page's Google Pay button opened the native sheet at €10.00; the old session was not manually cleared. Regression tests cover this exact legacy state, HTTP failure followed by a new checkout, and blocking during an actually running HTTP request.
-- Real PAYONE success/decline remains unverified due to the incomplete test-merchant configuration reported by its owner. Sheet opening does not prove payment authorization; submitted/unknown references still require backend reconciliation.
-- **Real Google Pay checkout creation verified on the Samsung in both modes**, after confirming the real Google TEST sheet (not fixture tokens). Independent backend GETs confirm `OPEN`, EUR 10.00 and a stored payment execution with product **320** and nonempty Google Pay token. Immediate payment execution was disabled; neither checkout is claimed as authorized:
+Tests cover request construction, token mapping, delivery prices, backend HTTP contracts, session persistence and duplicate-submission guards.
 
-  | Mode | Commerce case | Checkout | Merchant reference |
-  | --- | --- | --- | --- |
-  | Standard | `cb54118c-1cc6-4446-be6f-b3f3a6031022` | `0366d32d-9848-45bf-8247-7bcec639c858` | `5da9a483036e4866b42f` |
-  | Express | `b1b0a1cb-bdcd-4428-ba6d-8749f76bdf55` | `4e8177ef-2932-4519-957e-6c828d1594df` | `6c2c7104fa0e4bf29930` |
-
-  These are the Google-Pay-backed records for this test. The Express sheet returned the expected payment-not-confirmed error; closing it displayed the created IDs. Regression tests now assert the mandatory order reference, 20-character limit, explicit execution flag and redacted HTTP errors.
-- Previous tokenless prototype checkouts are historical backend records only, not Google Pay test successes. That creation path and its tests have been removed.
-- AGP 8.4.2 lint can exit successfully while reporting incompatible Kotlin 2.3 metadata (expected 2.0); its static-analysis coverage is therefore limited. The existing compileSdk/toolchain warnings are not resolved by this feature.
-
-Reproduce build/test/lint checks:
+Run build/test/lint checks:
 
 ```bash
 ./gradlew :pcp-client-android-sdk:testDebugUnitTest :app:testDebugUnitTest :app:assembleDebug :pcp-client-android-sdk:lintDebug :app:lintDebug --console=plain

@@ -17,12 +17,12 @@ For delivery selection and dynamic price updates inside the sheet, see [Google P
 
 Opening the page, checking readiness, changing delivery or cancelling the sheet before submission does not create a checkout. Standard does **not** use Express shipping/authorization callbacks or select delivery inside the sheet.
 
-**Creation is distinct from payment execution:** the demo defaults to `executePaymentOnCreation=false`. It supplies the real Google Pay payment input to PCP while deferring immediate payment execution. A successful Google Pay result means payment data was obtained, not that PAYONE authorized a payment.
+The demo defaults to `executePaymentOnCreation=false`. It supplies the Google Pay payment input to PCP while deferring immediate payment execution.
 
 ## 2. Prerequisites and dependencies
 
 - Android minSdk 24, Google Play services and a Google Pay-capable device/account. Render the button only after readiness succeeds.
-- PAYONE Google Pay/product 320 and the intended card networks must be configured for the merchant to execute payments. The merchant owner reports incomplete test-merchant payment configuration: checkout creation works, but real payment success/decline remains unverified.
+- PAYONE Google Pay/product 320 and the intended card networks must be configured for the merchant to execute payments.
 - Gateway: `payonegmbh`. `gatewayMerchantId` is the PAYONE merchant ID, not a Google web merchant ID.
 - The default API base URL is `http://localhost:3009/api/`. `GET /ui/config` at the same origin supplies the merchant ID (currently `P1_18352_2013244`); server credentials stay on the server. Creation uses the relative endpoint `commerce-cases`, resulting in `/api/commerce-cases` for this default. `GET /api/` may return 404 even when those routes work.
 - Google `ENVIRONMENT_TEST` and the PAYONE backend environment are independent. Production additionally requires Google production access for the Android package/signing certificate and the appropriate PAYONE setup.
@@ -194,7 +194,7 @@ The real request also includes Google-derived customer billing/contact details a
 
 **The Order reference is mandatory even when Commerce Case and Checkout references are set.** Its maximum length is **20 characters**, rather than the Checkout reference's 40. The demo generates a fresh 20-character reference and uses it on all three levels. Missing `orderReferences.merchantReference` caused HTTP 400/code `50308003`; a 36-character UUID caused code `50102001`. Both prevented checkout creation before payment execution.
 
-With immediate execution disabled, the tested backend stores a payment-execution resource containing product 320 and the Google Pay input while leaving the checkout `OPEN`. That resource's existence is not proof of authorization. Without a shopping cart the integration uses a Payment Execution, not an itemized PAYONE Order. Later execution must follow the PCP payment-execution lifecycle; the app does not automatically replay saved tokens.
+With immediate execution disabled, the backend stores a payment-execution resource containing product 320 and the Google Pay input while leaving the checkout `OPEN`. Without a shopping cart the integration uses a Payment Execution, not an itemized PAYONE Order. Later execution follows the PCP payment-execution lifecycle; the app does not automatically replay saved tokens.
 
 ## 7. Creation result, authorization and failures
 
@@ -234,28 +234,15 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 
 Open **Google Pay Standard Checkout**. Select delivery, confirm the sheet's final amount, then confirm Google TEST payment data. With execution deferred, the app should show a created checkout and deferred payment. Independently query `GET /api/commerce-cases/{commerceCaseId}/checkouts/{checkoutId}` for the default deployment (use your configured prefix elsewhere). Inspect status, amount and product ID without printing the returned token. To verify cancellation, dismiss the sheet before confirmation and ensure no new checkout request occurs. For emulators, `adb reverse` also works; alternatively configure `http://10.0.2.2:3009/api/`, allowed by the demo network security configuration.
 
-### Recorded real-device result (2026-11-05)
+### Automated checks
 
-Standard Checkout was confirmed through the native Google TEST sheet on Samsung SM-A528B, using real returned Google Pay data:
-
-| Field | Verified value |
-| --- | --- |
-| Commerce Case | `cb54118c-1cc6-4446-be6f-b3f3a6031022` |
-| Checkout | `0366d32d-9848-45bf-8247-7bcec639c858` |
-| Merchant reference | `5da9a483036e4866b42f` |
-| Backend status/amount | `OPEN`, EUR 10.00 |
-| Stored payment input | Product 320 and nonempty Google Pay token |
-| Payment execution | Immediate execution disabled; no authorization success claimed |
-
-Both the page and an independent backend GET confirmed the record. This is a Google-Pay-backed checkout, not a historical tokenless prototype. Successful real payment authorization/decline testing remains outstanding because the test merchant's payment configuration is incomplete.
-
-Automated verification: **90 passing tests** across SDK/app (74 SDK, 16 app), including 61 existing regressions and 29 Google Pay/checkout tests. Coverage includes Standard FINAL/no-callback request construction, shop-selected delivery, exact token mapping, missing-data rejection, mandatory/20-character Order reference, execution flag, safe errors, HTTP failures, session persistence and duplicate guards. After the API-base change, both modules were rebuilt and both suites rerun using `--rerun-tasks`: all 90 tests passed. Tests include root/custom prefixes with and without trailing slashes and independent `/ui/config` discovery. Fixtures/MockWebServer success is not a real authorization.
+Coverage includes Standard FINAL/no-callback request construction, shop-selected delivery, token mapping, missing-data rejection, mandatory/20-character Order reference, execution flag, safe errors, HTTP failures, session persistence and duplicate guards. Backend tests cover root/custom prefixes with and without trailing slashes and independent `/ui/config` discovery.
 
 ```bash
 ./gradlew :pcp-client-android-sdk:testDebugUnitTest :app:testDebugUnitTest :app:assembleDebug --console=plain
 ```
 
-Reports are in each module's `build/reports/tests/testDebugUnitTest/index.html`. Existing AGP 8.4.2/compileSdk warnings remain; earlier lint runs exited successfully but reported incompatible Kotlin 2.3 metadata (expected 2.0), limiting static-analysis coverage. Existing tokenizer/fingerprint/environment unit regressions are included; no card/PayPal end-to-end regression is claimed.
+Reports are in each module's `build/reports/tests/testDebugUnitTest/index.html`.
 
 ## Sources and related documentation
 

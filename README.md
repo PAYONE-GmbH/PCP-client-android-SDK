@@ -450,7 +450,7 @@ The SDK supports native **Standard Checkout** and **Express Checkout** with sepa
 - **Google Pay Standard Checkout:** select delivery on the checkout page; Google Pay returns the payment data, then the backend creates the checkout with Google Pay.
 - **Google Pay Express Checkout:** select address/delivery in the Google Pay sheet; native callbacks update prices and create the checkout with Google Pay before the sheet reports success.
 
-Both flows require a valid Google Pay token and submit PAYONE payment product **320**. There is no checkout-creation button or fallback without a payment method. Checkout creation and confirmed payment authorization are displayed separately.
+Both flows use a Google Pay token and PAYONE payment product **320**.
 
 Wallet is exposed by the SDK; the demo additionally uses the official button:
 
@@ -478,7 +478,7 @@ The pages are thin mode selectors over a shared implementation:
 
 Native Express shipping/authorization callbacks use Wallet **20.0.0**. Register the [callback service](app/src/main/java/com/payone/pcpclientandroiddemo/gpay/express/ExpressPaymentService.kt) as described in the [guide](GOOGLE_PAY_EXPRESS.md#express-callback-service). No WebView is involved.
 
-The demo defaults to `executePaymentOnCreation=false`: both pages create checkouts with real Google Pay/product-320 payment data while deferring payment execution. Standard and Express creation have been verified on the device and in the backend; Express still reports payment-not-confirmed in the sheet and displays the checkout IDs after closing it. See the guide for the required order reference (maximum 20 characters), execution parameter and recorded IDs. Real authorization testing remains blocked by the reported incomplete PAYONE test-merchant configuration.
+The demo defaults to `executePaymentOnCreation=false`: both pages create checkouts with Google Pay/product-320 payment data while deferring payment execution. See the guides for the required order reference (maximum 20 characters) and execution parameter.
 
 Wallet 20 removes `AutoResolveHelper.resolveTask`; use `TaskResultContracts.GetPaymentDataResult` and launch only after the payment Task completes. Never log payment tokens or full payment/address JSON.
 
