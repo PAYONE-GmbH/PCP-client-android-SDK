@@ -2,7 +2,7 @@
 
 For a dedicated, step-by-step Standard integration guide, see [Google Pay Standard Checkout](GOOGLE_PAY_STANDARD.md). This guide details the shared integration and native Express callbacks.
 
-Two separate pages share configurable checkout components. **Both create PCP checkouts only with validated Google Pay payment data**, using PAYONE product **320**. There is no checkout-only button, tokenless backend overload or fallback to another payment method.
+Two separate pages share configurable checkout components. Both integrate Google Pay payments with PCP using PAYONE product **320**.
 
 ## Flows
 
@@ -13,12 +13,12 @@ Two separate pages share configurable checkout components. **Both create PCP che
 | Initial total | `FINAL`, basket + selected delivery | `ESTIMATED`, basket; native callbacks provide `FINAL` totals |
 | Contact/address | Google Pay collects full billing/shipping address, phone and email | Same; intermediate shipping callbacks expose only redacted addresses |
 | Backend submission | After a successful Google Pay result, with the returned token | Inside the native `PAYMENT_AUTHORIZATION` callback |
-| Confirmation | Page displays checkout IDs and separately whether payment is authorized | Sheet succeeds only after confirmed backend authorization; page displays IDs/status |
+| Confirmation | Page displays payment result and checkout IDs | Authorization callback completes the sheet; page displays IDs/status |
 | Cancellation before submission | No checkout request; release local session | Same |
 
 Opening either page, checking readiness, changing delivery on the Standard page or dismissing the sheet does not create a checkout.
 
-**Checkout creation and payment execution are separate.** The demo defaults to `executePaymentOnCreation=false`: Google Pay data is required and sent to PCP, but immediate payment execution is not requested.
+The demo defaults to `executePaymentOnCreation=false` for deferred payment execution. Set it to `true` to request immediate execution.
 
 ## Prerequisites
 
@@ -39,7 +39,7 @@ SDK package `com.payone.pcp_client_android_sdk.googlepay`:
 | `GooglePayExpressConfig` | Merchant, currency, country, shipping countries, networks and authentication methods |
 | `GooglePayExpressPayment` | Validated token/contact model; Standard and Express parsers; PAYONE mobile-input mapping |
 | `GooglePayExpressService` | Async native callback bridge, safe errors and completion deadline |
-| `GooglePayExpressResult` | Google success/cancel/error status mapping; does not independently verify PAYONE payment |
+| `GooglePayExpressResult` | Google Pay success/cancel/error status mapping |
 
 Demo package `app/src/main/java/com/payone/pcpclientandroiddemo/gpay/checkout`:
 
@@ -48,7 +48,7 @@ Demo package `app/src/main/java/com/payone/pcpclientandroiddemo/gpay/checkout`:
 | `CheckoutConfig.kt` | Shared parameters, delivery options, amount formatting and validation |
 | `GooglePayCheckoutActivity.kt` | Shared UI/readiness/result/lifecycle logic; concrete pages select only mode/config |
 | `CheckoutPricing.kt` | Parameter-driven Express delivery updates and final totals |
-| `CheckoutBackend.kt` | Existing proxy contract, address/token mapping and strict authorization interpretation |
+| `CheckoutBackend.kt` | Proxy contract, address/token mapping and payment-response handling |
 | `CheckoutSession.kt` | Persisted identity/configuration/outcome, duplicate guard and serial async worker |
 
 The separate concrete pages are [Standard](app/src/main/java/com/payone/pcpclientandroiddemo/GooglePayActivity.kt) and [Express](app/src/main/java/com/payone/pcpclientandroiddemo/gpay/express/GooglePayExpressActivity.kt). [ExpressPaymentService](app/src/main/java/com/payone/pcpclientandroiddemo/gpay/express/ExpressPaymentService.kt) connects the SDK callback bridge to these shared components. No Activity instance or singleton holds checkout identity for callbacks.
@@ -212,7 +212,7 @@ The actual request also includes checkout references, Google-derived customer bi
 
 With `autoExecuteOrder=false`, the backend stores a `paymentExecutions` resource containing `mobilePaymentMethodSpecificInput.paymentProductId=320` and the Google Pay token, while the checkout remains `OPEN`. A later payment step follows the PCP payment-execution lifecycle; no automatic retry/replay is performed by the app.
 
-Responses must provide valid `commerceCaseId` and `checkout.checkoutId`. The page can report these IDs as **checkout created with Google Pay**, even if the response does not confirm payment. Authorization additionally requires `checkout.paymentResponse.payment.id`, status `PENDING_CAPTURE` or `CAPTURED`, `statusOutput.isAuthorized=true`, and no checkout error or merchant action. Created/pending/rejected/redirect states and HTTP 2xx alone never count as authorized. Express returns a sheet error for an unconfirmed payment, while retaining available checkout IDs for reconciliation.
+Responses provide `commerceCaseId` and `checkout.checkoutId` for displaying and retrieving the checkout. The payment response includes `checkout.paymentResponse.payment.id`, status `PENDING_CAPTURE` or `CAPTURED` and `statusOutput.isAuthorized=true` for authorized payments. The Express callback maps the backend payment result to the sheet's success/error status.
 
 HTTP errors display/store only the HTTP status, error codes and validated field names; response messages/bodies are excluded because a proxy can echo sensitive request data. A failed creation never falls back to a tokenless request.
 
@@ -227,7 +227,7 @@ Both pages share one local guard (`google-pay-express` preferences, retained acr
 | `IDLE` | No active session; a user may start Google Pay |
 | `OPEN` | Sheet active; cancellation before submission returns to IDLE |
 | `SUBMITTED` | Request started; unknown outcome on network/parse failure; check its reference in the backend. Only an actually running HTTP request disables the button |
-| `CREATED` | Valid server IDs received but payment unconfirmed; retain IDs for reconciliation; a fresh Google Pay checkout may be started |
+| `CREATED` | Checkout created; IDs available; a fresh Google Pay checkout may be started |
 | `CONFIRMED` | Authorized; repeated callback returns success without another POST; user may explicitly start a new checkout |
 
 Activity recreation preserves selected delivery/busy state; persisted backend outcomes can be displayed after recreation. An active sheet or actually running backend request prevents overlapping Standard/Express sessions. A persisted `SUBMITTED` state alone does **not** permanently disable the Google Pay button. After the request finishes (including failure), an explicit button click starts a new Google Pay session with a new reference and fresh payment data. The previous reference/state/safe outcome is retained in the preferences' `history` set; no old token is replayed. Reconcile an uncertain previous payment separately before treating a new checkout as a replacement order.

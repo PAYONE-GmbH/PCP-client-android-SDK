@@ -13,7 +13,7 @@ For delivery selection and dynamic price updates inside the sheet, see [Google P
 5. Google Pay displays a **FINAL** total of €10.00 or €14.99 and collects billing/shipping address, phone and email.
 6. On a successful Google Pay result, validate the payment data and combine it with the delivery option selected on the shop page.
 7. Submit once to `POST /api/commerce-cases`, including the Google Pay token and product 320.
-8. Display the returned commerce-case/checkout IDs. Report payment authorization separately, only if the backend confirms it.
+8. Display the payment result and returned commerce-case/checkout IDs.
 
 Opening the page, checking readiness, changing delivery or cancelling the sheet before submission does not create a checkout. Standard does **not** use Express shipping/authorization callbacks or select delivery inside the sheet.
 
@@ -196,15 +196,15 @@ The real request also includes Google-derived customer billing/contact details a
 
 With immediate execution disabled, the backend stores a payment-execution resource containing product 320 and the Google Pay input while leaving the checkout `OPEN`. Without a shopping cart the integration uses a Payment Execution, not an itemized PAYONE Order. Later execution follows the PCP payment-execution lifecycle; the app does not automatically replay saved tokens.
 
-## 7. Creation result, authorization and failures
+## 7. Payment result and error handling
 
-- **Created:** the response contains valid `commerceCaseId` and `checkout.checkoutId`. Show these IDs even if payment is not authorized.
-- **Payment deferred:** `executePaymentOnCreation=false`; the page explicitly reports deferred execution rather than payment success.
-- **Authorized:** requires `checkout.paymentResponse.payment.id`, `PENDING_CAPTURE` or `CAPTURED`, `statusOutput.isAuthorized=true`, and no checkout error or merchant action. HTTP 2xx, `OPEN`, pending or rejected states alone do not qualify.
+- **Created:** the response contains `commerceCaseId` and `checkout.checkoutId` for displaying and retrieving the checkout.
+- **Payment deferred:** `executePaymentOnCreation=false` schedules payment execution for a later step in the PCP lifecycle.
+- **Authorized:** the payment response provides `checkout.paymentResponse.payment.id`, status `PENDING_CAPTURE` or `CAPTURED` and `statusOutput.isAuthorized=true`.
 - **HTTP failure:** surface status/error codes/validated field names, without response messages or bodies that may echo sensitive input. There is no fallback creation request without Google Pay.
 - **Network timeout/invalid response:** the result can be unknown; reconcile the reference in the backend before treating another checkout as a replacement.
 
-The HTTP client uses 5-second connect/15-second read timeouts and does not follow redirects. Redirect/3DS continuation is not implemented in the demo. Use an authenticated HTTPS backend with backend-owned prices and idempotency for production.
+The HTTP client uses 5-second connect/15-second read timeouts and does not follow redirects. Use an authenticated HTTPS backend with backend-owned prices and idempotency for production.
 
 ## 8. Session, retries and lifecycle
 
@@ -215,7 +215,7 @@ Both demo pages share `google-pay-express` preferences and a serial background w
 | `IDLE` | Ready to start Google Pay |
 | `OPEN` | Sheet active; cancellation before submission releases this session |
 | `SUBMITTED` | Request started; unknown result after HTTP/network/parse failure |
-| `CREATED` | Checkout IDs received, payment not confirmed |
+| `CREATED` | Checkout created; IDs available |
 | `CONFIRMED` | Backend confirmed authorization; repeated submission is not sent again |
 
 An active sheet or actually running request blocks overlapping checkouts. A persisted `SUBMITTED` state alone does not permanently disable the button. After work finishes, an explicit click starts a fresh Google Pay session with a new reference and fresh payment data. Previous reference/state/safe outcome remains in `history`; no old token is replayed. Delivery selection/busy state survives Activity recreation, and preference listeners restore completed outcomes.
