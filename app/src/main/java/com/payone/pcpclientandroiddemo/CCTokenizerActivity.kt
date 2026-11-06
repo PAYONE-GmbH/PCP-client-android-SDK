@@ -1,12 +1,21 @@
 package com.payone.pcpclientandroiddemo
 
+import android.content.Context
+import android.content.Intent
 import android.os.Bundle
+import android.view.View
+import android.webkit.WebView
 import android.widget.Button
+import android.widget.EditText
+import android.widget.TextView
+import androidx.core.widget.NestedScrollView
+import androidx.fragment.app.Fragment
+import androidx.fragment.app.FragmentManager
+import com.google.gson.GsonBuilder
 import com.payone.pcp_client_android_sdk.cctokenizer.CardNumberErrors
 import com.payone.pcp_client_android_sdk.cctokenizer.CardholderNameErrors
 import com.payone.pcp_client_android_sdk.cctokenizer.CreditcardTokenizerConfig
 import com.payone.pcp_client_android_sdk.cctokenizer.CreditcardTokenizerFragment
-import com.payone.pcp_client_android_sdk.cctokenizer.CustomIconsConfig
 import com.payone.pcp_client_android_sdk.cctokenizer.ExpiryDateErrors
 import com.payone.pcp_client_android_sdk.cctokenizer.IframeConfig
 import com.payone.pcp_client_android_sdk.cctokenizer.LocaleTextAriaLabels
@@ -17,8 +26,18 @@ import com.payone.pcp_client_android_sdk.cctokenizer.LocaleTextPlaceholders
 import com.payone.pcp_client_android_sdk.cctokenizer.SecurityCodeErrors
 import com.payone.pcp_client_android_sdk.cctokenizer.SubmitButtonConfig
 import com.payone.pcp_client_android_sdk.cctokenizer.UIConfig
+import kotlin.math.ceil
 
 class CCTokenizerActivity : BaseActivity() {
+    companion object {
+        const val EXTRA_MERCHANT_TOKEN = "com.payone.pcpclientandroiddemo.MERCHANT_TOKEN"
+
+        fun createIntent(context: Context, merchantToken: String? = null): Intent =
+            Intent(context, CCTokenizerActivity::class.java).apply {
+                merchantToken?.let { putExtra(EXTRA_MERCHANT_TOKEN, it) }
+            }
+    }
+
     private val uiConfig = UIConfig(
         formBgColor = "#446462ff",
         fieldBgColor = "wheat",
@@ -30,7 +49,39 @@ class CCTokenizerActivity : BaseActivity() {
         fieldErrorCodeColor = "green"
     )
 
-    private val token = "<Token to be retrieved from the CommercePlatform-API>"
+    private val token = ""
+
+    private fun showOutput(message: String) {
+        val output = findViewById<TextView>(R.id.tokenizerOutput)
+        output.append("\n\n$message")
+        val scroll = findViewById<NestedScrollView>(R.id.tokenizerOutputScroll)
+        scroll.post {
+            // fullScroll(FOCUS_DOWN) also moves input focus, interrupting the
+            // WebView's numeric keyboard. Move only the output's viewport.
+            scroll.scrollTo(0, output.bottom)
+        }
+    }
+
+    private fun bindStatus(fragment: CreditcardTokenizerFragment) {
+        fragment.onStatusChanged = { showOutput(it) }
+    }
+
+    private fun fitTokenizerContent(view: View) {
+        val webView = view.findViewById<WebView>(com.payone.pcp_client_android_sdk.R.id.webView)
+        val frame = findViewById<View>(R.id.fragment_container)
+        webView.viewTreeObserver.addOnPreDrawListener {
+            // The HTML includes its header, the hosted iframe AND the submit
+            // button. Reserve space for the whole document before drawing logs.
+            @Suppress("DEPRECATION")
+            val documentHeight = ceil(webView.contentHeight * webView.scale.toDouble()).toInt()
+            if (documentHeight > frame.height + resources.displayMetrics.density * 2) {
+                frame.layoutParams = frame.layoutParams.apply { height = documentHeight }
+                false
+            } else {
+                true
+            }
+        }
+    }
 
     // Example: Custom text configuration with multiple locales
     private val customTextConfig = mapOf(
@@ -135,6 +186,7 @@ class CCTokenizerActivity : BaseActivity() {
     private val config = CreditcardTokenizerConfig(
         iframe = IframeConfig(
             iframeWrapperId = "payment-IFrame",
+            height = 400,
             width = 400
         ),
         uiConfig = uiConfig,
@@ -146,35 +198,41 @@ class CCTokenizerActivity : BaseActivity() {
         mode = "test",
         token = token,
         customTextConfig = customTextConfig,
-        customIconsConfig = CustomIconsConfig(
-            useCustomValidationIcons = true,
-            showCardBrandIcons = false,
-            successIcon = "/validIcon.svg",
-            errorIcon = "/invalidIcon.svg"
-        ),
         tokenizationSuccessCallback = { statusCode, token, cardDetails, inputMode ->
-            android.util.Log.d("CC Success", "Tokenized card successfully")
-            android.util.Log.d("CC Success", "Status: $statusCode")
-            android.util.Log.d("CC Success", "Token: $token")
-            android.util.Log.d("CC Success", "Card Details: $cardDetails")
-            android.util.Log.d("CC Success", "InputMode: $inputMode")
-
+            showOutput("Tokenization succeeded\n" + GsonBuilder().setPrettyPrinting().create().toJson(
+                mapOf("statusCode" to statusCode, "token" to token,
+                    "cardDetails" to cardDetails, "inputMode" to inputMode),
+            ))
         },
         tokenizationFailureCallback = { statusCode, errorResponse ->
-            android.util.Log.e("CC Failure", "Tokenization of card failed")
-            android.util.Log.e("CC Failure", "Status: $statusCode")
-            android.util.Log.e("CC Failure", "Error: ${errorResponse["error"]}")
+            showOutput("Tokenization failed ($statusCode)\n" +
+                GsonBuilder().setPrettyPrinting().create().toJson(errorResponse))
         }
     )
 
 
-    private val tokenizerHtmlUrl = "https://path-to-your-server/creditcard-tokenizer.html"
+    // Use your merchant-controlled HTTPS origin; the HTML itself is bundled in the app.
+    private val localHTMLBaseURL = "https://your-merchant.example/checkout/"
     override fun onCreate(savedInstanceState: Bundle?) {
         headerTitle = "CC Tokenizer"
         super.onCreate(savedInstanceState)
+        supportFragmentManager.registerFragmentLifecycleCallbacks(
+            object : FragmentManager.FragmentLifecycleCallbacks() {
+                override fun onFragmentViewCreated(
+                    fm: FragmentManager, fragment: Fragment, view: View, savedInstanceState: Bundle?,
+                ) {
+                    if (fragment is CreditcardTokenizerFragment) fitTokenizerContent(view)
+                }
+            }, false,
+        )
         setContentView(R.layout.activity_cc_tokenizer)
         (supportFragmentManager.findFragmentById(R.id.fragment_container) as? CreditcardTokenizerFragment)
-            ?.setTokenizationCallbacks(config.tokenizationSuccessCallback, config.tokenizationFailureCallback)
+            ?.let {
+                it.setTokenizationCallbacks(config.tokenizationSuccessCallback, config.tokenizationFailureCallback)
+                bindStatus(it)
+            }
+        // Tokens are runtime input, not Activity saved state.
+        findViewById<EditText>(R.id.tokenizerMerchantToken).isSaveEnabled = false
 
         if (supportFragmentManager.backStackEntryCount > 0 || !isTaskRoot) {
             supportActionBar?.setDisplayHomeAsUpEnabled(true)
@@ -182,14 +240,28 @@ class CCTokenizerActivity : BaseActivity() {
 
         val btnStart = findViewById<Button>(R.id.btnStartCCTokenizer)
         btnStart.setOnClickListener {
-            val fragment = CreditcardTokenizerFragment.newInstance(
-                config,
-                tokenizerHtmlUrl
+            val merchantToken = findViewById<EditText>(R.id.tokenizerMerchantToken).text.toString().trim()
+            if (merchantToken.isEmpty()) {
+                showOutput("Enter a current merchant token from your backend first.")
+                return@setOnClickListener
+            }
+            findViewById<TextView>(R.id.tokenizerOutput).text = "Loading bundled HTML…"
+            val fragment = CreditcardTokenizerFragment.newInstanceWithAsset(
+                config.copy(token = merchantToken),
+                "creditcard-tokenizer-example.html",
+                localHTMLBaseURL,
             )
+            bindStatus(fragment)
             supportFragmentManager.beginTransaction().replace(
                 com.payone.pcpclientandroiddemo.R.id.fragment_container,
                 fragment
             ).commit()
+        }
+
+        val initialToken = intent.getStringExtra(EXTRA_MERCHANT_TOKEN)?.trim().orEmpty()
+        if (savedInstanceState == null && initialToken.isNotEmpty()) {
+            findViewById<EditText>(R.id.tokenizerMerchantToken).setText(initialToken)
+            btnStart.performClick()
         }
     }
 

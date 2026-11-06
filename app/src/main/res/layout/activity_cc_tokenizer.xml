@@ -1,21 +1,60 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/tokenizerPageScroll"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:padding="24dp">
+    android:fillViewport="true">
 
-
-    <Button
-        android:id="@+id/btnStartCCTokenizer"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Start Credit Card Tokenization"
-        android:layout_marginTop="24dp" />
+        android:orientation="vertical"
+        android:padding="24dp">
 
-    <RelativeLayout
-        android:id="@+id/fragment_container"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content" />
+        <EditText
+            android:id="@+id/tokenizerMerchantToken"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Merchant token from your backend"
+            android:inputType="textMultiLine|textNoSuggestions"
+            android:maxLines="2"
+            android:importantForAutofill="no"
+            android:gravity="top" />
 
-</LinearLayout>
+        <Button
+            android:id="@+id/btnStartCCTokenizer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Start Credit Card Tokenization"
+            android:layout_marginTop="24dp" />
+
+        <!-- Initial viewport; the Activity expands it to fit the complete HTML document. -->
+        <RelativeLayout
+            android:id="@+id/fragment_container"
+            android:layout_width="match_parent"
+            android:layout_height="560dp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="Tokenizer status and result"
+            android:textStyle="bold" />
+
+        <androidx.core.widget.NestedScrollView
+            android:id="@+id/tokenizerOutputScroll"
+            android:layout_width="match_parent"
+            android:layout_height="160dp"
+            android:fillViewport="true">
+            <TextView
+                android:id="@+id/tokenizerOutput"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:fontFamily="monospace"
+                android:textSize="12sp"
+                android:textIsSelectable="true"
+                android:text="Enter a merchant token, then start tokenization." />
+        </androidx.core.widget.NestedScrollView>
+
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>
