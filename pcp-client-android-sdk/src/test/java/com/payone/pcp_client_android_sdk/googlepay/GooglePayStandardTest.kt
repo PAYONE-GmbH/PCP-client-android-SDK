@@ -8,7 +8,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [28], manifest = Config.NONE)
+@Config(sdk = [24, 28, 35, 36, 37], manifest = Config.NONE)
 class GooglePayStandardTest {
     @Test fun standardRequestIsFinalAndHasNoExpressCallbacksOrShippingOptionSelection() {
         val standard = GooglePayStandard(GooglePayExpressConfig("merchant", "Shop"))

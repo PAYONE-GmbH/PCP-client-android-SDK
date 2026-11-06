@@ -1,27 +1,32 @@
 [versions]
-agp = "8.4.2"
-kotlin = "2.3.0"
-compose-plugin = "1.8.2"
-coreKtx = "1.13.1"
+agp = "9.2.1"
+kotlin = "2.3.10"
+coreKtx = "1.17.0"
 junit = "4.13.2"
-junitVersion = "1.2.1"
-espressoCore = "3.6.1"
-lifecycleRuntimeKtx = "2.8.4"
-activityCompose = "1.9.1"
-composeBom = "2023.08.00"
-appcompat = "1.7.0"
+junitVersion = "1.3.0"
+espressoCore = "3.7.0"
+lifecycleRuntimeKtx = "2.9.4"
+activityCompose = "1.11.0"
+composeBom = "2025.10.01"
+appcompat = "1.7.1"
+fragment = "1.8.9"
+wallet = "20.0.0"
 material = "1.12.0"
 gson = "2.11.0"
 kotlinxSerialization = "1.8.0"
 mockito = "4.0.0"
 mockitoAndroid = "5.13.0"
-testRunner = "1.5.2"
-vanniktech = "0.28.0"
+testRunner = "1.7.0"
+testCore = "1.7.0"
+robolectric = "4.17"
+vanniktech = "0.36.0"
 
 sonarqube = "5.0.0.4638"
 constraintlayout = "2.1.4"
 
 [libraries]
+robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectric" }
+androidx-test-core = { module = "androidx.test:core", version.ref = "testCore" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
@@ -38,6 +43,8 @@ androidx-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-man
 androidx-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
 androidx-material3 = { group = "androidx.compose.material3", name = "material3" }
 androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
+androidx-fragment-ktx = { module = "androidx.fragment:fragment-ktx", version.ref = "fragment" }
+google-wallet = { module = "com.google.android.gms:play-services-wallet", version.ref = "wallet" }
 material = { group = "com.google.android.material", name = "material", version.ref = "material" }
 androidx-constraintlayout = { group = "androidx.constraintlayout", name = "constraintlayout", version.ref = "constraintlayout" }
 gson = { group = "com.google.code.gson", name = "gson", version.ref = "gson" }
@@ -51,6 +58,5 @@ jetbrains-kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = 
 android-library = { id = "com.android.library", version.ref = "agp" }
 sonar = { id = "org.sonarqube", version.ref = "sonarqube" }
 maven-publish = { id = "com.vanniktech.maven.publish", version.ref = "vanniktech" }
-jetbrainsCompose = { id = "org.jetbrains.compose", version.ref = "compose-plugin" }
 kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
 compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
