@@ -103,22 +103,23 @@ This produces a final total of €25.00 or €32.00 according to the page select
 
 ### Set your backend URL before starting the page
 
-Pass your API base URL through the existing `CheckoutConfig(backendUrl = "...")` constructor parameter when defining the concrete page's `checkoutConfig`, as shown above. This is configuration in application code, set before the checkout starts; there is no URL input field or Intent-based URL override. Rebuild/install the demo after changing its configuration. Apply the same configuration to the separate Express page if you use both flows (see [Express backend configuration](GOOGLE_PAY_EXPRESS.md#backend-url-before-starting-the-checkout)).
+Open **Backend URL** in the demo main menu, enter your API base URL and tap **Save** before opening the checkout page. The saved setting applies to both Standard and Express and survives app restarts. No rebuild is needed. **Use default** restores `http://localhost:3009/api/`. A concrete page can still override `checkoutConfig` in application code as shown above; such an explicit override takes precedence over the saved setting for that page.
 
 `http://localhost:3009/api/` is only the default used by this repository's local test setup. Neither that host, that port nor `/api/` is required. For example:
 
 | Backend setup | `backendUrl` parameter | Device routing |
 | --- | --- | --- |
 | Hosted backend under `/v1/` | `https://test-backend.example.com/v1/` | Device must be able to reach the host |
+| Phone on the same Wi-Fi as the computer | `http://192.168.178.42:4000/api/` | Replace the IP/port with yours; bind the backend to `0.0.0.0` or its LAN address and allow the port through the firewall. No USB forwarding needed. |
 | Developer machine, API at root, port 8080 | `http://localhost:8080/` | Run `adb reverse tcp:8080 tcp:8080` for the connected device |
 | Android emulator to host API under `/api/` | `http://10.0.2.2:8080/api/` | Android emulator host alias |
 | LAN test server, API at root | `https://backend.internal.example:8443/` | Device DNS/network and TLS trust must permit access |
 
 Supply the **API base URL including scheme, optional port and deployment prefix**. The adapter appends only `commerce-cases`, preserving the configured prefix. Both `/v1` and `/v1/` work; a base ending in `/` posts directly to `/commerce-cases`. No `/api/` prefix is hardcoded in requests. Separately, demo merchant discovery uses `/ui/config` at the same origin (outside the API prefix). A different server must expose that merchant-discovery route and the same checkout contract, or you must adapt `CheckoutBackend` to its API. Do not put credentials in the URL.
 
-For local HTTP, Android must permit cleartext traffic to the selected host. The demo's [network security configuration](app/src/main/res/xml/network_security_config.xml) permits its listed development hosts; add your own development host there if necessary. Port changes do not require a new host entry. With `localhost`, the address refers to the Android device itself unless `adb reverse` forwards the selected port. Use HTTPS for hosted environments.
+The demo's [network security configuration](app/src/main/res/xml/network_security_config.xml) permits HTTP to user-configured local development hosts without editing an allowlist. With `localhost`, the address refers to the Android device itself unless `adb reverse` forwards the selected port. A LAN address, emulator host alias or reachable HTTPS endpoint avoids this forwarding. Use HTTPS for hosted environments.
 
-The chosen URL is stored with the session configuration before submission, so the backend call uses that session's configured endpoint.
+The chosen URL is stored with the session configuration before submission, so the backend call uses that session's configured endpoint even if the shared setting changes later.
 
 ## 5. SDK request and Google Pay result
 
@@ -224,15 +225,14 @@ An orphaned OPEN session after process death still requires manual recovery: rec
 
 ## 9. Run and verify
 
-For the connected physical device and local proxy:
+Build and install the demo:
 
 ```bash
-adb reverse tcp:3009 tcp:3009
 ./gradlew :app:assembleDebug
 adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```
 
-Open **Google Pay Standard Checkout**. Select delivery, confirm the sheet's final amount, then confirm Google TEST payment data. With execution deferred, the app should show a created checkout and deferred payment. Independently query `GET /api/commerce-cases/{commerceCaseId}/checkouts/{checkoutId}` for the default deployment (use your configured prefix elsewhere). Inspect status, amount and product ID without printing the returned token. To verify cancellation, dismiss the sheet before confirmation and ensure no new checkout request occurs. For emulators, `adb reverse` also works; alternatively configure `http://10.0.2.2:3009/api/`, allowed by the demo network security configuration.
+Set **Backend URL** in the main menu using the [routing examples](#set-your-backend-url-before-starting-the-page). Only the localhost-over-USB option requires `adb reverse tcp:3009 tcp:3009` (replace the port if needed). Open **Google Pay Standard Checkout**. Select delivery, confirm the sheet's final amount, then confirm Google TEST payment data. With execution deferred, the app should show a created checkout and deferred payment. Independently query `GET /api/commerce-cases/{commerceCaseId}/checkouts/{checkoutId}` for the default deployment (use your configured prefix elsewhere). Inspect status, amount and product ID without printing the returned token. To verify cancellation, dismiss the sheet before confirmation and ensure no new checkout request occurs.
 
 ### Automated checks
 

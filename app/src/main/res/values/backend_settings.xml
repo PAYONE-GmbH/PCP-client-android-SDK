@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="backend_settings_title">Backend URL</string>
+    <string name="backend_settings_help">Shared by Google Pay Standard and Express. Enter the API base URL, including its path (for example /api/).
+\nPhone on Wi-Fi: http://192.168.178.42:4000/api/
+\nAndroid Studio emulator: http://10.0.2.2:4000/api/
+\nHosted backend: https://demo.example.com/api/
+\nOn a phone, localhost means the phone itself. Use your computer’s LAN address to connect without USB forwarding.</string>
+    <string name="backend_url_hint">https://demo.example.com/api/</string>
+    <string name="backend_url_invalid">Enter an HTTP or HTTPS URL with a valid host and port, without credentials, query or fragment.</string>
+    <string name="backend_save">Save</string>
+    <string name="backend_reset">Use default</string>
+    <string name="backend_saved">Backend URL saved for both Google Pay pages.</string>
+    <string name="backend_connection_failed">Connection or configuration request failed.</string>
+    <string name="backend_unavailable">Backend unavailable: %1$s\n%2$s\n%3$s\nChange the address under Backend URL in the main menu. Merchant discovery requires GET /ui/config at the same origin.</string>
+    <string name="backend_loopback_hint">localhost refers to this Android device. Use your computer’s LAN address, or connect by USB and run adb reverse tcp:%1$d tcp:%1$d.</string>
+    <string name="backend_emulator_hint">10.0.2.2 reaches the computer only from the Android Studio emulator. On a phone, use the computer’s LAN address.</string>
+    <string name="backend_network_hint">Check host, port and API path. For a LAN backend, use the same Wi-Fi, bind the server to 0.0.0.0 or its LAN address, and allow the port through the firewall.</string>
+</resources>

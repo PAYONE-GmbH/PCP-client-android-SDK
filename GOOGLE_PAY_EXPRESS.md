@@ -94,7 +94,7 @@ Standard then sends €25.00 or €32.00 according to the page selection; Expres
 
 ### Backend URL before starting the checkout
 
-Pass the backend URL as a `CheckoutConfig` constructor parameter in the concrete page, before starting a checkout. The Express page can be configured independently of Standard:
+Open **Backend URL** in the demo main menu, enter your API base URL and tap **Save** before opening the checkout page. The saved setting is shared by Standard and Express and survives app restarts. **Use default** restores `http://localhost:3009/api/`. No rebuild is needed. A concrete page can still supply an explicit `checkoutConfig` override in application code; this takes precedence over the saved setting for that page:
 
 ```kotlin
 class GooglePayExpressActivity : GooglePayCheckoutActivity() {
@@ -105,13 +105,15 @@ class GooglePayExpressActivity : GooglePayCheckoutActivity() {
 }
 ```
 
-These classes use the shared demo types from `com.payone.pcpclientandroiddemo.gpay.checkout`. Set the URL in application code and rebuild/install the demo. There is no runtime URL editor or Intent-based override. If both pages should use the same backend, supply the same URL to both configurations, optionally from one shared application constant.
+These classes use the shared demo types from `com.payone.pcpclientandroiddemo.gpay.checkout`. The stock pages use the shared runtime setting; rebuilding is only needed for application-code changes.
 
-`http://localhost:3009/api/` is only the repository's local default. For a backend serving its API at the root on another local port, pass `backendUrl = "http://localhost:8080/"` and run `adb reverse tcp:8080 tcp:8080`. This posts to `/commerce-cases`. On an Android emulator you can instead use `http://10.0.2.2:8080/`. A hosted backend can use its own HTTPS hostname, port and prefix such as `/v1/`.
+`http://localhost:3009/api/` is only the repository's local default. On a phone connected to the same Wi-Fi as your computer, enter a URL such as `http://192.168.178.42:4000/api/`, replacing the IP and port with yours. Bind the backend to `0.0.0.0` or its LAN address and allow its port through the firewall. No USB forwarding is needed. On an Android Studio emulator, use `http://10.0.2.2:4000/api/`. A hosted backend or HTTPS tunnel can use its own reachable hostname, port and prefix such as `/v1/`.
 
-Provide the **API base URL with scheme, optional port and deployment prefix**. `CheckoutBackend` appends only the relative endpoint `commerce-cases`; `/api/` is not hardcoded. Trailing slashes are normalized, so `/v1` and `/v1/` both post to `/v1/commerce-cases`. Demo merchant discovery separately uses `/ui/config` at the same origin, outside the API prefix. Your server must implement that merchant-discovery route and checkout contract, or the adapter must be adjusted. The configured host must be reachable from the Android device. For local HTTP, add any new development host to the demo's [network security configuration](app/src/main/res/xml/network_security_config.xml); the existing listed hosts also permit other ports. Do not include credentials in the URL.
+If you prefer localhost over USB, enter `http://localhost:8080/` and run `adb reverse tcp:8080 tcp:8080`. This posts to `/commerce-cases`. On a phone, localhost otherwise refers to the phone itself.
 
-The URL, including the API prefix, is persisted with the session configuration before launching Google Pay. The Express callback service reads that configuration, so callbacks use the supplied backend rather than falling back to `http://localhost:3009/api/` after service recreation. See also the [Standard URL/routing examples](GOOGLE_PAY_STANDARD.md#set-your-backend-url-before-starting-the-page).
+Provide the **API base URL with scheme, optional port and deployment prefix**. `CheckoutBackend` appends only the relative endpoint `commerce-cases`; `/api/` is not hardcoded. Trailing slashes are normalized, so `/v1` and `/v1/` both post to `/v1/commerce-cases`. Demo merchant discovery separately uses `/ui/config` at the same origin, outside the API prefix. Your server must implement that merchant-discovery route and checkout contract, or the adapter must be adjusted. The demo's [network security configuration](app/src/main/res/xml/network_security_config.xml) permits HTTP to arbitrary local development hosts without an allowlist edit. Use HTTPS for hosted environments. The URL editor rejects credentials, query strings, fragments and invalid hosts/ports.
+
+The URL, including the API prefix, is persisted with the session configuration before launching Google Pay. The Express callback service reads that configuration, so callbacks use the session's backend after service recreation, even if the shared URL setting changes later. See also the [Standard URL/routing examples](GOOGLE_PAY_STANDARD.md#set-your-backend-url-before-starting-the-page).
 
 ## SDK requests and result handling
 
@@ -239,12 +241,11 @@ The address adapter maps Google's full address1 to PAYONE `street`, joins furthe
 ## Run and verify
 
 ```bash
-adb reverse tcp:3009 tcp:3009
 ./gradlew :app:assembleDebug
 adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```
 
-Open **Google Pay Standard Checkout** or **Google Pay Express Checkout** from the demo home screen. For an emulator, `adb reverse` also works; alternatively set `backendUrl` to `http://10.0.2.2:3009/api/`. The demo's network security config permits these local hosts.
+Set **Backend URL** in the main menu using the [routing options](#backend-url-before-starting-the-checkout), then open **Google Pay Standard Checkout** or **Google Pay Express Checkout**. Only localhost over USB needs `adb reverse tcp:3009 tcp:3009` (adjust the port to match your backend).
 
 Standard: select Standard (€10.00) or Express (€14.99) delivery before opening Google Pay; verify the final sheet amount. Express: open the sheet and switch delivery there; verify the total updates from €10.00 to €14.99. Cancel before confirmation to verify no checkout submission. Use `executePaymentOnCreation=false` for deferred execution or `true` for immediate execution. Verify the checkout with `GET /api/commerce-cases/{commerceCaseId}/checkouts/{checkoutId}` and inspect only safe product/status fields, not the returned token.
 

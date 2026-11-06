@@ -476,7 +476,16 @@ Detailed integration guides cover configuration, SDK usage, backend mapping, ses
 - [Google Pay Standard Checkout](GOOGLE_PAY_STANDARD.md): shop-selected delivery, final-price request and backend submission after the Google Pay result.
 - [Google Pay Express Checkout](GOOGLE_PAY_EXPRESS.md): native shipping/authorization callbacks, dynamic totals and callback-service registration.
 
-Set your backend **before starting the checkout** through the concrete page's configuration, for example `override val checkoutConfig = CheckoutConfig(backendUrl = "https://test-backend.example.com/v1/")`. Configure both pages if you use both flows. The default API base URL is `http://localhost:3009/api/`; your backend can use another host, port or path. The client appends only `commerce-cases`: a base of `https://test-backend.example.com/` therefore posts directly to `/commerce-cases`, without requiring `/api/`. See the [Standard URL/routing examples](GOOGLE_PAY_STANDARD.md#set-your-backend-url-before-starting-the-page) and [Express configuration](GOOGLE_PAY_EXPRESS.md#backend-url-before-starting-the-checkout) for merchant discovery, device networking and local HTTP setup.
+Open **Backend URL** in the demo main menu, enter your API base URL and tap **Save** before opening either Google Pay page. The setting is saved across app restarts and shared by Standard and Express; no rebuild is needed. **Use default** restores `http://localhost:3009/api/`. A running checkout retains the URL with which it started.
+
+| Environment | Example backend URL | Setup |
+| --- | --- | --- |
+| Phone on the same Wi-Fi as the computer | `http://192.168.178.42:4000/api/` | Replace the IP/port with yours. Bind the backend to `0.0.0.0` or its LAN address and allow its port through the firewall. No USB forwarding needed. |
+| Android Studio emulator | `http://10.0.2.2:4000/api/` | The emulator host alias reaches the computer. No USB forwarding needed. |
+| Hosted backend or HTTPS tunnel | `https://demo.example.com/api/` | Use an address reachable from the device. |
+| USB with localhost | `http://localhost:4000/api/` | Run `adb reverse tcp:4000 tcp:4000` for the connected device. |
+
+On a phone, `localhost` means the phone itself. The demo permits local HTTP connections to configurable hosts; use HTTPS for hosted environments. Include the API path in the URL: `/api/` and port `3009` are defaults, not requirements. The client appends `commerce-cases` to this base; merchant discovery uses `GET /ui/config` at the same origin, outside the API prefix. See the [Standard URL/routing examples](GOOGLE_PAY_STANDARD.md#set-your-backend-url-before-starting-the-page) and [Express configuration](GOOGLE_PAY_EXPRESS.md#backend-url-before-starting-the-checkout).
 
 The pages are thin mode selectors over a shared implementation:
 

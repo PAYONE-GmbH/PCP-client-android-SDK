@@ -23,7 +23,7 @@ import java.util.UUID
 /** Shared UI/lifecycle. Concrete pages supply checkout mode and configuration. */
 abstract class GooglePayCheckoutActivity : BaseActivity() {
     protected abstract val mode: CheckoutMode
-    protected open val checkoutConfig: CheckoutConfig = CheckoutConfig()
+    protected open val checkoutConfig: CheckoutConfig by lazy { BackendSettings(this).configuration() }
     private lateinit var status: TextView
     private lateinit var delivery: Spinner
     private lateinit var session: CheckoutSession
@@ -105,7 +105,9 @@ abstract class GooglePayCheckoutActivity : BaseActivity() {
                     }
                 } else status.text = "Google Pay is not available on this device."
             }.addOnFailureListener(this) { status.text = "Google Pay readiness check failed." }
-        }.addOnFailureListener(this) { status.text = "Backend unavailable: ${checkoutConfig.backendUrl}. Check device routing." }
+        }.addOnFailureListener(this) { error ->
+            status.text = BackendSettings(this).connectionError(checkoutConfig.backendUrl, error)
+        }
     }
 
     private fun selectedOption() = checkoutConfig.deliveryOptions[delivery.selectedItemPosition.coerceAtLeast(0)].id
