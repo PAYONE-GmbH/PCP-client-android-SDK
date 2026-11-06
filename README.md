@@ -182,7 +182,7 @@ To integrate the Credit Card Tokenizer feature into your Android application, fo
 
 #### 1. Add the HTML page
 
-Host your HTML page locally (for development) or on a server. The page must contain the payment IFrame and submit button:
+Provide your HTML as an app asset, an HTML string or a hosted page. No separate website is needed for the first two options. The page must contain the payment IFrame and submit button:
 
 ```html
 <div id="payment-IFrame"></div> <button id="submit">Submit</button>
@@ -226,8 +226,9 @@ val config = CreditcardTokenizerConfig(
         selector = "#submit",
         element = null
     ),
-    environment = "test", // Use "live" for production
-    tokenizationSuccessCallback = { statusCode, token, cardDetails ->
+    mode = "test", // Use "live" for production
+    token = merchantToken, // Fetch from your backend before creating the configuration
+    tokenizationSuccessCallback = { statusCode, token, cardDetails, inputMode ->
         Log.d("CC Success", "Tokenized card successfully")
         Log.d("CC Success", "Status: $statusCode")
         Log.d("CC Success", "Token: $token")
@@ -246,10 +247,62 @@ val config = CreditcardTokenizerConfig(
 You must fetch the JWT from your backend before initializing the SDK.
 
 ```kotlin
-val token = fetchJwtFromBackend() // Implement this in your backend
+val merchantToken = fetchJwtFromBackend() // Fetch before creating config above
 ```
 
 #### 5. Host and load the HTML page
+
+Choose one of these HTML sources. The configuration, submit-button handling and tokenization callbacks are the same for all three.
+
+##### Bundled HTML (no web server)
+
+Place your page in `app/src/main/assets/creditcard-tokenizer.html` and load it with:
+
+```kotlin
+val fragment = CreditcardTokenizerFragment.newInstanceWithAsset(
+    config = config,
+    assetPath = "creditcard-tokenizer.html",
+    localHTMLBaseURL = "https://your-merchant.example/checkout/",
+)
+```
+
+The demo uses its bundled [example HTML](app/src/main/assets/creditcard-tokenizer-example.html). Set `localHTMLBaseURL` in `CCTokenizerActivity` to your merchant's HTTPS origin. Enter a current merchant token in the screen's input field and tap **Start Credit Card Tokenization**. The **Tokenizer status and result** panel shows script/form initialization, submission progress, error responses and the returned token/card details. The demo displays results on screen rather than logging tokens to Logcat.
+
+For your own UI, set `fragment.onStatusChanged = { message -> /* update status */ }` before adding the Fragment and reattach it after Activity recreation. Progress callbacks run on the main thread; tokenization results continue to use the configured success/failure callbacks.
+
+The demo Activity also accepts an optional merchant token when opened:
+
+```kotlin
+startActivity(CCTokenizerActivity.createIntent(this, merchantToken = merchantToken))
+```
+
+A nonblank token pre-fills the input and loads the form automatically on first launch. Without a token, the user enters it manually. The input remains available to load a replacement token. An equivalent explicit Intent can use `putExtra(CCTokenizerActivity.EXTRA_MERCHANT_TOKEN, merchantToken)`. Activity recreation retains the existing Fragment instead of automatically starting a second tokenizer. In SDK integrations, supply the token directly through `CreditcardTokenizerConfig(token = merchantToken, ...)`; the Activity helper belongs to the demo app.
+
+##### HTML string (no web server)
+
+```kotlin
+val fragment = CreditcardTokenizerFragment.newInstanceWithHtml(
+    config = config,
+    html = """
+        <!DOCTYPE html>
+        <html><head>
+          <meta name="viewport" content="width=device-width, initial-scale=1">
+        </head><body>
+          <div id="payment-IFrame"></div>
+          <button id="submit" type="button">Submit</button>
+        </body></html>
+    """.trimIndent(),
+    localHTMLBaseURL = "https://your-merchant.example/checkout/",
+)
+```
+
+Both local variants use `WebView.loadDataWithBaseURL`. The HTTPS base URL supplies the document origin and resolves relative resource URLs; the SDK neither uploads the HTML nor requests an HTML page from that URL. Use a merchant-controlled origin that matches your PAYONE integration. A `file://` or `data:` origin can be rejected by the hosted form's framing policy, so local HTML requires an HTTPS URL with a host. Invalid base URLs are rejected with `IllegalArgumentException`; unreadable assets call the failure callback with status `500` and `error = LocalHTMLLoadingFailed`.
+
+Include CSS inline, or reference reachable HTTPS assets. Relative images, styles and scripts resolve against the HTTPS base URL, not the Android asset directory. The SDK injects PAYONE's hosted script and connects the configured submit button; do not initialize a second Hosted SDK instance in the page. Tokenization still uses PAYONE's online script and form. Keep HTML strings small because Fragment arguments are saved with Activity state; prefer assets for larger pages. After process restoration, rebind callbacks using `setTokenizationCallbacks` as described in [Android support](ANDROID_SUPPORT.md).
+
+##### Hosted HTML
+
+The existing `newInstance(config, tokenizerHtmlUrl)` API continues to load a remote page. For HTTPS hosting, use the initialization example below.
 
 For local development, host your HTML file using a local server (e.g. `http-server` or similar). Use your computer's IP address or emulator's special address:
 
@@ -301,6 +354,8 @@ android:networkSecurityConfig="@xml/network_security_config"
    - Only use this config for development. In production, always use HTTPS and remove the `network_security_config.xml` reference from your manifest.
 
 #### 6. Initialize the Tokenizer
+
+Add the Fragment from any of the variants above to your container. For an existing hosted page:
 
 ```kotlin
 val fragment = CreditcardTokenizerFragment.newInstance(
