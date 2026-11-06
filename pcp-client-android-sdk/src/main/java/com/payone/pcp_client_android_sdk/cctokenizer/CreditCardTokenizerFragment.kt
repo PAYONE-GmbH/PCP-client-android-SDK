@@ -8,7 +8,6 @@ package com.payone.pcp_client_android_sdk.cctokenizer
  * file that was distributed with this source code.
  */
 
-import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -24,13 +23,16 @@ import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.fragment.app.Fragment
+import androidx.core.os.BundleCompat
 import com.google.gson.Gson
 import com.payone.pcp_client_android_sdk.R
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 
 class CreditcardTokenizerFragment : Fragment() {
-    private lateinit var webView: WebView
+    private var currentWebView: WebView? = null
+    private val webView: WebView get() = checkNotNull(currentWebView)
+    private var webAppInterface: WebAppInterface? = null
     private lateinit var config: CreditcardTokenizerConfig
     private lateinit var tokenizerHtmlUrl: String
 
@@ -61,16 +63,11 @@ class CreditcardTokenizerFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        webView = view.findViewById(R.id.webView)
+        currentWebView = view.findViewById(R.id.webView)
         arguments?.let {
             tokenizerHtmlUrl = it.getString(ARG_TOKENIZER_HTML_URL) ?: ""
-            config = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                it.getSerializable(ARG_CONFIG, CreditcardTokenizerConfig::class.java)
-                    ?: throw IllegalArgumentException("Config cannot be null")
-            } else {
-                it.getSerializable(ARG_CONFIG) as? CreditcardTokenizerConfig
-                    ?: throw IllegalArgumentException("Config cannot be null")
-            }
+            config = BundleCompat.getSerializable(it, ARG_CONFIG, CreditcardTokenizerConfig::class.java)
+                ?: throw IllegalArgumentException("Config cannot be null")
         }
         setupWebView()
     }
@@ -80,23 +77,33 @@ class CreditcardTokenizerFragment : Fragment() {
         private val onScriptLoadedCallbackFunc: () -> Unit,
         private val config: CreditcardTokenizerConfig
     ) {
+        @Volatile private var active = true
+
+        fun deactivate() {
+            active = false
+        }
+
+        private fun dispatch(callback: () -> Unit) {
+            if (active) handler.post { if (active) callback() }
+        }
+
         @JavascriptInterface
         fun onScriptLoaded() {
-            handler.post {
+            dispatch {
                 onScriptLoadedCallbackFunc()
             }
         }
 
         @JavascriptInterface
         fun onScriptError() {
-            handler.post {
+            dispatch {
                 config.tokenizationFailureCallback?.invoke(500, mapOf("error" to "LoadingScriptFailed"))
             }
         }
 
         @JavascriptInterface
         fun onTokenizationSuccess(statusCode: Int, token: String, cardDetailsJson: String, inputMode: String) {
-            handler.post {
+            dispatch {
                 val cardDetails: CardDetails = Gson().fromJson(cardDetailsJson, CardDetails::class.java)
                 config.tokenizationSuccessCallback?.invoke(statusCode, token, cardDetails, inputMode)
             }
@@ -104,7 +111,7 @@ class CreditcardTokenizerFragment : Fragment() {
 
         @JavascriptInterface
         fun onTokenizationFailure(statusCode: Int, errorResponseJson: String) {
-            handler.post {
+            dispatch {
                 val errorResponse: Map<String, Any?> = Gson().fromJson(errorResponseJson, Map::class.java) as Map<String, Any?>
                 config.tokenizationFailureCallback?.invoke(statusCode, errorResponse)
             }
@@ -112,13 +119,14 @@ class CreditcardTokenizerFragment : Fragment() {
     }
 
     private fun setupWebView() {
-        android.webkit.WebView.setWebContentsDebuggingEnabled(true)
         webView.settings.javaScriptEnabled = true
         webView.settings.domStorageEnabled = true
         webView.webViewClient = WebViewClient()
         webView.webChromeClient = WebChromeClient()
         webView.settings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
-        webView.addJavascriptInterface(WebAppInterface(handler, ::makeScriptToPopulateHTML, config), "AndroidInterface")
+        webAppInterface = WebAppInterface(handler, ::makeScriptToPopulateHTML, config).also {
+            webView.addJavascriptInterface(it, "AndroidInterface")
+        }
         webView.webViewClient = object : WebViewClient() {
             override fun onPageFinished(view: WebView?, url: String?) {
                 super.onPageFinished(view, url)
@@ -132,6 +140,22 @@ class CreditcardTokenizerFragment : Fragment() {
             }
         }
         webView.loadUrl(tokenizerHtmlUrl)
+    }
+
+    override fun onDestroyView() {
+        webAppInterface?.deactivate()
+        webAppInterface = null
+        handler.removeCallbacksAndMessages(null)
+        currentWebView?.let {
+            it.stopLoading()
+            it.removeJavascriptInterface("AndroidInterface")
+            it.webViewClient = WebViewClient()
+            it.webChromeClient = null
+            (it.parent as? ViewGroup)?.removeView(it)
+            it.destroy()
+        }
+        currentWebView = null
+        super.onDestroyView()
     }
 
     private fun makeScriptToLoadPayoneHostedScript() {
@@ -241,5 +265,3 @@ class CreditcardTokenizerFragment : Fragment() {
     }
 
 }
-
-

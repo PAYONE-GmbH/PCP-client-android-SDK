@@ -1,8 +1,5 @@
-import com.vanniktech.maven.publish.SonatypeHost
-
 plugins {
     alias(libs.plugins.android.library)
-    alias(libs.plugins.jetbrains.kotlin.android)
     alias(libs.plugins.sonar)
     kotlin("plugin.serialization") version libs.versions.kotlin.get()
     alias(libs.plugins.maven.publish)
@@ -10,7 +7,7 @@ plugins {
 
 android {
     namespace = "com.payone.pcp_client_android_sdk"
-    compileSdk = 35
+    compileSdk = 37
 
     defaultConfig {
         minSdk = 24
@@ -32,34 +29,40 @@ android {
         sourceCompatibility = JavaVersion.VERSION_1_8
         targetCompatibility = JavaVersion.VERSION_1_8
     }
-    kotlin {
-        compilerOptions {
-            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_1_8)
-        }
-    }
+    testOptions.unitTests.isIncludeAndroidResources = true
+}
+
+kotlin.compilerOptions.jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_1_8)
+
+tasks.withType<Test>().configureEach {
+    // Each Android platform has its own Robolectric sandbox/resources.
+    maxHeapSize = "2g"
+    systemProperty("robolectric.sandboxCacheSize", "2")
+    // Android 16+ shared-memory emulation accesses FileDescriptor internals.
+    jvmArgs("--add-exports=java.base/jdk.internal.access=ALL-UNNAMED")
 }
 
 dependencies {
-    api("com.google.android.gms:play-services-wallet:20.0.0")
+    api(libs.google.wallet)
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
+    implementation(libs.androidx.fragment.ktx)
     implementation(libs.material)
     implementation(libs.gson)
     implementation(libs.kotlinx.serialization)
     testImplementation(libs.junit)
     testImplementation(libs.mockito.core)
-    testImplementation("org.robolectric:robolectric:4.11.1")
-    testImplementation("androidx.test:core:1.5.0")
+    testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.test.core)
     androidTestImplementation(libs.mockito.android)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.runner)
     androidTestImplementation(libs.androidx.espresso.core)
-    debugImplementation("androidx.fragment:fragment-testing:1.5.7")
 }
 
 mavenPublishing {
-    publishToMavenCentral(SonatypeHost.CENTRAL_PORTAL)
+    publishToMavenCentral()
 
     signAllPublications()
 

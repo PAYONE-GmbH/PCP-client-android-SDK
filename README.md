@@ -47,7 +47,17 @@ Welcome to the PAYONE Commerce Platform Client Android SDK for the PAYONE Commer
 
 ## Supported Android API Version
 
-In order to use the SDK your minimum SDK Version needs to be at least API 34.
+The SDK minimum is **Android 7.0 (API 24)**. The current source builds with
+**Android 17 (API 37)**; the demo targets API 37. `compileSdk` is not a maximum
+supported Android version, and the integrating app controls `targetSdk`.
+
+Card tokenization and fingerprinting require a working, updated Android System
+WebView. Google Pay additionally requires compatible Google Play services and
+Google Pay availability for the device, account and merchant.
+
+Use **Oracle JDK 27** to build and run this repository's complete test suite. See
+[Android support and verification](ANDROID_SUPPORT.md) for the tested API
+matrix, build commands and integration requirements.
 
 ## Features
 

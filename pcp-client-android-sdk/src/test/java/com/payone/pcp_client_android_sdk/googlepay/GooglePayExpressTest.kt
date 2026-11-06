@@ -11,7 +11,7 @@ import org.robolectric.annotation.Config
 internal const val PAYMENT = """{"email":"buyer@example.test","shippingAddress":{"name":"Ada Lovelace","countryCode":"DE","postalCode":"10115","locality":"Berlin","address1":"Teststrasse 1"},"shippingOptionData":{"id":"standard"},"paymentMethodData":{"type":"CARD","info":{"billingAddress":{"name":"Ada Lovelace","countryCode":"DE","postalCode":"10115","locality":"Berlin","address1":"Teststrasse 1"}},"tokenizationData":{"type":"PAYMENT_GATEWAY","token":"fixture-token"}}}"""
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [28], manifest = Config.NONE)
+@Config(sdk = [24, 28, 35, 36, 37], manifest = Config.NONE)
 class GooglePayExpressTest {
     private val express = GooglePayExpress(GooglePayExpressConfig("payone-mid", "Merchant"))
 

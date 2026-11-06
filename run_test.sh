@@ -1,13 +1,13 @@
 #!/bin/sh
 
 # PCP Android SDK Test Runner Script
-# Runs unit tests for the pcp-client-android-sdk module
+# Runs SDK and demo unit tests (requires JDK 21 for API 36+ Robolectric).
 
 echo "Running Android SDK tests..."
 echo ""
 
 # Run tests
-./gradlew :pcp-client-android-sdk:test
+./gradlew testDebugUnitTest
 
 # Check if tests passed
 if [ $? -eq 0 ]; then

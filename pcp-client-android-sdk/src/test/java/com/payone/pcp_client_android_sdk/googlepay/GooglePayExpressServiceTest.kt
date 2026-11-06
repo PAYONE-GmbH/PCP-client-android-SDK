@@ -21,7 +21,7 @@ import org.robolectric.annotation.Config
 import java.time.Duration
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [28], manifest = Config.NONE)
+@Config(sdk = [24, 28, 35, 36, 37], manifest = Config.NONE)
 class GooglePayExpressServiceTest {
     private class Service : GooglePayExpressService() {
         var authorization: () -> Task<Boolean> = { Tasks.forResult(true) }
