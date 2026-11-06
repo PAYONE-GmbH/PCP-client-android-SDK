@@ -58,7 +58,8 @@ consumer rules. A normal `assembleRelease` does not load these test-only rules.
   verified repository configuration. Keep `minSdk >= 24`.
 - Keep Android System WebView/Chrome updated and enabled. OS API level alone
   does not determine JavaScript, TLS or hosted-tokenizer compatibility.
-- Host tokenizer HTML over HTTPS and handle network/JavaScript errors.
+- Supply tokenizer HTML as an app asset, an HTML string with an HTTPS base URL,
+  or a hosted HTTPS page (see the README). Handle network/JavaScript errors.
   WebView debugging is controlled by the host, not globally enabled by the SDK.
 - Google Pay needs supported device/account/region, compatible Play services
   and merchant configuration. Check readiness before launching.

@@ -35,7 +35,12 @@ class MainActivity : BaseActivity() {
             startActivity(Intent(this, FingerprintActivity::class.java))
         }
         ccTokenizerBtn.setOnClickListener {
-            startActivity(Intent(this, CCTokenizerActivity::class.java))
+            startActivity(
+                CCTokenizerActivity.createIntent(
+                    context = this,
+                    merchantToken = "", // Replace with your current merchant token.
+                )
+            )
         }
         googlePayBtn.setOnClickListener {
             startActivity(Intent(this, GooglePayActivity::class.java))
