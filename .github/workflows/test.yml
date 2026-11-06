@@ -40,6 +40,10 @@ jobs:
       fail-fast: false
       matrix:
         api: [24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, '37.0']
+        include:
+          # Google publishes the API-27 Google APIs image for x86, not x86_64.
+          - api: 27
+            arch: x86
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -59,8 +63,17 @@ jobs:
       - uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: ${{ matrix.api }}
-          arch: x86_64
+          arch: ${{ matrix.arch || 'x86_64' }}
           target: google_apis
+          # Avoid the generic AVD defaults (including a 64 MB VM heap).
+          ram-size: ${{ matrix.api == '37.0' && '4096M' || '2048M' }}
+          heap-size: 512M
+          emulator-boot-timeout: 900
+          emulator-options: >-
+            -no-window -gpu swiftshader -feature -Vulkan -no-snapshot -noaudio
+            -no-boot-anim -no-metrics -logcat '*:W'
+            ${{ matrix.api == '37.0' && '-show-kernel' || '' }}
+          pre-emulator-launch-script: adb start-server
           disable-animations: true
           script: ./gradlew :app:connectedReleaseAndroidTest -PandroidTestBuildType=release --console=plain
       - uses: actions/upload-artifact@v4

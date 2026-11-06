@@ -2,6 +2,8 @@ package com.payone.pcpclientandroiddemo
 
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.os.Parcel
+import androidx.lifecycle.Lifecycle
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.payone.pcp_client_android_sdk.cctokenizer.CreditcardTokenizerConfig
@@ -23,7 +25,7 @@ class TokenizerWebViewTest {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             val received = AtomicReference<String>()
             val completed = AtomicReference(CountDownLatch(1))
-            val fragment = CreditcardTokenizerFragment.newInstance(
+            var fragment = CreditcardTokenizerFragment.newInstance(
                 CreditcardTokenizerConfig(
                     iframe = IframeConfig("payment-IFrame"), token = "local-test",
                     uiConfig = com.payone.pcp_client_android_sdk.cctokenizer.UIConfig(fieldTextColor = "red"),
@@ -32,7 +34,7 @@ class TokenizerWebViewTest {
                         received.set("$token:${details.cardType}:${details.cardNumber}")
                         completed.get().countDown()
                     },
-                    tokenizationFailureCallback = { _, _ -> completed.get().countDown() },
+                    tokenizationFailureCallback = { _, _ -> },
                 ), "about:blank",
             )
             fun loadFixture() {
@@ -51,7 +53,27 @@ class TokenizerWebViewTest {
             }
             scenario.onActivity {
                 it.supportFragmentManager.beginTransaction()
-                    .add(android.R.id.content, fragment).commitNow()
+                    .add(android.R.id.content, fragment, "tokenizer").commitNow()
+                // Force the same serialization that Activity stopping triggers on API 26.
+                val parcel = Parcel.obtain()
+                try {
+                    parcel.writeBundle(fragment.arguments)
+                    val bytes = parcel.marshall()
+                    assertTrue(bytes.isNotEmpty())
+                    parcel.unmarshall(bytes, 0, bytes.size)
+                    parcel.setDataPosition(0)
+                    val saved = parcel.readBundle(CreditcardTokenizerConfig::class.java.classLoader)!!
+                    // Use the platform reader so this test does not require keeping
+                    // an AndroidX helper that R8 can inline out of the host APK.
+                    @Suppress("DEPRECATION")
+                    val restored = saved.getSerializable("config") as CreditcardTokenizerConfig
+                    assertEquals("local-test", restored.token)
+                    assertThrows(IllegalStateException::class.java) {
+                        restored.tokenizationFailureCallback(500, emptyMap())
+                    }
+                } finally {
+                    parcel.recycle()
+                }
                 loadFixture()
             }
             assertTrue("JavaScript callback timed out", completed.get().await(20, TimeUnit.SECONDS))
@@ -64,6 +86,17 @@ class TokenizerWebViewTest {
                 loadFixture()
             }
             assertTrue("Callback after recreation timed out", completed.get().await(20, TimeUnit.SECONDS))
+            assertEquals("local-token:visa:1234", received.get())
+            scenario.moveToState(Lifecycle.State.CREATED)
+            scenario.moveToState(Lifecycle.State.RESUMED)
+            scenario.recreate()
+            scenario.onActivity {
+                received.set(null)
+                completed.set(CountDownLatch(1))
+                fragment = it.supportFragmentManager.findFragmentByTag("tokenizer") as CreditcardTokenizerFragment
+                loadFixture()
+            }
+            assertTrue("Callback after Activity recreation timed out", completed.get().await(20, TimeUnit.SECONDS))
             assertEquals("local-token:visa:1234", received.get())
         }
     }

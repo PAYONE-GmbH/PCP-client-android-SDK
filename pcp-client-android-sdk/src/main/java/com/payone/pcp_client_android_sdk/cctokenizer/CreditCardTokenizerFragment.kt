@@ -23,17 +23,26 @@ import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.viewModels
 import androidx.core.os.BundleCompat
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.Lifecycle
 import com.google.gson.Gson
 import com.payone.pcp_client_android_sdk.R
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 
+internal class TokenizerState : ViewModel() {
+    var config: CreditcardTokenizerConfig? = null
+}
+
 class CreditcardTokenizerFragment : Fragment() {
     private var currentWebView: WebView? = null
     private val webView: WebView get() = checkNotNull(currentWebView)
     private var webAppInterface: WebAppInterface? = null
-    private lateinit var config: CreditcardTokenizerConfig
+    private val state: TokenizerState by viewModels()
+    private var initialConfig: CreditcardTokenizerConfig? = null
+    private val config: CreditcardTokenizerConfig get() = checkNotNull(state.config)
     private lateinit var tokenizerHtmlUrl: String
 
     private val handler = Handler(Looper.getMainLooper())
@@ -46,11 +55,39 @@ class CreditcardTokenizerFragment : Fragment() {
             tokenizerHtmlUrl: String
         ): CreditcardTokenizerFragment {
             return CreditcardTokenizerFragment().apply {
+                initialConfig = config
                 arguments = Bundle().apply {
                     putSerializable(ARG_CONFIG, config)
                     putString(ARG_TOKENIZER_HTML_URL, tokenizerHtmlUrl)
                 }
             }
+        }
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        state.config = initialConfig ?: state.config ?: arguments?.let {
+            BundleCompat.getSerializable(it, ARG_CONFIG, CreditcardTokenizerConfig::class.java)
+        } ?: throw IllegalArgumentException("Config cannot be null")
+        initialConfig = null
+    }
+
+    /** Rebind callbacks to the current host, including after process-state restoration. */
+    fun setTokenizationCallbacks(
+        onSuccess: (Int, String, CardDetails, String) -> Unit,
+        onFailure: (Int, Map<String, Any?>) -> Unit,
+    ) {
+        if (lifecycle.currentState.isAtLeast(Lifecycle.State.CREATED)) {
+            state.config = config.copy(
+                tokenizationSuccessCallback = onSuccess, tokenizationFailureCallback = onFailure,
+            )
+        } else {
+            val settings = initialConfig ?: arguments?.let {
+                BundleCompat.getSerializable(it, ARG_CONFIG, CreditcardTokenizerConfig::class.java)
+            }
+            initialConfig = checkNotNull(settings).copy(
+                tokenizationSuccessCallback = onSuccess, tokenizationFailureCallback = onFailure,
+            )
         }
     }
 
@@ -66,8 +103,6 @@ class CreditcardTokenizerFragment : Fragment() {
         currentWebView = view.findViewById(R.id.webView)
         arguments?.let {
             tokenizerHtmlUrl = it.getString(ARG_TOKENIZER_HTML_URL) ?: ""
-            config = BundleCompat.getSerializable(it, ARG_CONFIG, CreditcardTokenizerConfig::class.java)
-                ?: throw IllegalArgumentException("Config cannot be null")
         }
         setupWebView()
     }
@@ -75,7 +110,7 @@ class CreditcardTokenizerFragment : Fragment() {
     private class WebAppInterface(
         private val handler: Handler,
         private val onScriptLoadedCallbackFunc: () -> Unit,
-        private val config: CreditcardTokenizerConfig
+        private val currentConfig: () -> CreditcardTokenizerConfig
     ) {
         @Volatile private var active = true
 
@@ -97,7 +132,7 @@ class CreditcardTokenizerFragment : Fragment() {
         @JavascriptInterface
         fun onScriptError() {
             dispatch {
-                config.tokenizationFailureCallback?.invoke(500, mapOf("error" to "LoadingScriptFailed"))
+                currentConfig().tokenizationFailureCallback(500, mapOf("error" to "LoadingScriptFailed"))
             }
         }
 
@@ -105,7 +140,7 @@ class CreditcardTokenizerFragment : Fragment() {
         fun onTokenizationSuccess(statusCode: Int, token: String, cardDetailsJson: String, inputMode: String) {
             dispatch {
                 val cardDetails: CardDetails = Gson().fromJson(cardDetailsJson, CardDetails::class.java)
-                config.tokenizationSuccessCallback?.invoke(statusCode, token, cardDetails, inputMode)
+                currentConfig().tokenizationSuccessCallback(statusCode, token, cardDetails, inputMode)
             }
         }
 
@@ -113,7 +148,7 @@ class CreditcardTokenizerFragment : Fragment() {
         fun onTokenizationFailure(statusCode: Int, errorResponseJson: String) {
             dispatch {
                 val errorResponse: Map<String, Any?> = Gson().fromJson(errorResponseJson, Map::class.java) as Map<String, Any?>
-                config.tokenizationFailureCallback?.invoke(statusCode, errorResponse)
+                currentConfig().tokenizationFailureCallback(statusCode, errorResponse)
             }
         }
     }
@@ -124,7 +159,7 @@ class CreditcardTokenizerFragment : Fragment() {
         webView.webViewClient = WebViewClient()
         webView.webChromeClient = WebChromeClient()
         webView.settings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
-        webAppInterface = WebAppInterface(handler, ::makeScriptToPopulateHTML, config).also {
+        webAppInterface = WebAppInterface(handler, ::makeScriptToPopulateHTML) { config }.also {
             webView.addJavascriptInterface(it, "AndroidInterface")
         }
         webView.webViewClient = object : WebViewClient() {

@@ -34,12 +34,12 @@ applies system-bar, cutout and keyboard insets centrally in `BaseActivity`.
 
 | Check | Coverage |
 | --- | --- |
-| Card fragment lifecycle (Robolectric) | Every API 24–37; config retrieval, bridge success, queued/late callback cancellation, destruction and view recreation |
+| Card fragment lifecycle (Robolectric) | Every API 24–37; config retrieval, bridge success, queued/late callback cancellation, destruction and view recreation; saved-state/callback restoration on API 26, 27, 37 |
 | Fingerprint and Google Pay unit tests | API 24, 28, 35, 36, 37; SDK behavior and request construction |
 | Demo/backend unit tests | Existing checkout/session and mocked backend checks |
 | Lint | SDK and demo, including API-use checks; warnings remain visible |
 | Release build | SDK AAR and R8-minified demo APK |
-| Device WebView test | Local HTML calls the real JavaScript bridge and deserializes card details, repeated after view recreation |
+| Device WebView test | Local HTML calls the real JavaScript bridge and deserializes card details, repeated after view and Activity recreation; arguments are explicitly marshalled |
 | GitHub Actions device matrix | Configured for every API 24–37 (SDK package `37.0`); inspect the actual workflow results |
 
 ```sh
@@ -64,5 +64,11 @@ consumer rules. A normal `assembleRelease` does not load these test-only rules.
   and merchant configuration. Check readiness before launching.
 - Minified hosts must include the AAR's consumer rules for Gson field names,
   card deserialization and JavaScript methods.
+- Tokenizer callbacks are runtime-only; saved state serializes settings without
+  callbacks or their captured objects. The Fragment retains callbacks across
+  configuration changes in a ViewModel. Rebind callbacks to the current host
+  with `setTokenizationCallbacks(onSuccess, onFailure)` after restoring a Fragment
+  (for example, after `super.onCreate` in the host Activity), including after
+  process recreation. Use `findFragmentById`/`findFragmentByTag` to retrieve it.
 - Preserve PayPal return-URL/manifest setup when raising target SDK. PayPal is
   a demo integration of the separate PayPal SDK.
