@@ -322,6 +322,17 @@ data class CreditcardTokenizerConfig(
     // v1.4 additions
     val customIconsConfig: CustomIconsConfig? = null,
     val ctpConfig: CTPConfig? = null,
-    val tokenizationSuccessCallback: (statusCode: Int, token: String, cardDetails: CardDetails, inputMode: String) -> Unit,
-    val tokenizationFailureCallback: (statusCode: Int, errorResponse: Map<String, Any?>) -> Unit,
-) : Serializable
+    @Transient val tokenizationSuccessCallback: (statusCode: Int, token: String, cardDetails: CardDetails, inputMode: String) -> Unit,
+    @Transient val tokenizationFailureCallback: (statusCode: Int, errorResponse: Map<String, Any?>) -> Unit,
+) : Serializable {
+    // Callbacks can capture Activities or other non-serializable objects. Only settings
+    // belong in saved state; the Fragment retains live callbacks in its ViewModel.
+    private fun readResolve(): Any = copy(
+        tokenizationSuccessCallback = { _, _, _, _ -> callbacksNotAttached() },
+        tokenizationFailureCallback = { _, _ -> callbacksNotAttached() },
+    )
+
+    private fun callbacksNotAttached(): Nothing = error(
+        "Reattach tokenizer callbacks with setTokenizationCallbacks after restoring process state",
+    )
+}

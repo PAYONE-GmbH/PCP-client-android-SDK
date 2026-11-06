@@ -47,7 +47,17 @@ Welcome to the PAYONE Commerce Platform Client Android SDK for the PAYONE Commer
 
 ## Supported Android API Version
 
-In order to use the SDK your minimum SDK Version needs to be at least API 34.
+The SDK minimum is **Android 7.0 (API 24)**. The current source builds with
+**Android 17 (API 37)**; the demo targets API 37. `compileSdk` is not a maximum
+supported Android version, and the integrating app controls `targetSdk`.
+
+Card tokenization and fingerprinting require a working, updated Android System
+WebView. Google Pay additionally requires compatible Google Play services and
+Google Pay availability for the device, account and merchant.
+
+Use **Oracle JDK 27** to build and run this repository's complete test suite. See
+[Android support and verification](ANDROID_SUPPORT.md) for the tested API
+matrix, build commands and integration requirements.
 
 ## Features
 
@@ -445,134 +455,51 @@ For further information see: https://docs.payone.com/pcp/commerce-platform-payme
 
 ### Google Pay Integration
 
-The PAYONE Commerce Platform Client Android SDK provides a demonstration project for Google Pay integration. The integration uses the official Google Pay Button libraries which are available for various frameworks:
+The SDK supports native **Standard Checkout** and **Express Checkout** with separate demo pages and the official Compose Google Pay button:
 
-- Compose ([@google-pay/compose-pay-button](https://github.com/google-pay/compose-pay-button))
+- **Google Pay Standard Checkout:** select delivery on the checkout page; Google Pay returns the payment data, then the backend creates the checkout with Google Pay.
+- **Google Pay Express Checkout:** select address/delivery in the Google Pay sheet; native callbacks update prices and create the checkout with Google Pay before the sheet reports success.
 
-Our demo implementation uses this library.
+Both flows use a Google Pay token and PAYONE payment product **320**.
 
-#### Setup Google Pay Integration (Compose Example)
-
-##### 1. **Install Dependencies**
-
-Add the following dependencies to your `build.gradle.kts`:
+Wallet is exposed by the SDK; the demo additionally uses the official button:
 
 ```kotlin
 dependencies {
-    implementation("com.google.android.gms:play-services-wallet:19.2.1")
-    implementation("com.google.pay.button:compose-pay-button:1.2.0")
-    // ...other dependencies
+    implementation("com.google.android.gms:play-services-wallet:20.0.0")
+    implementation("com.google.pay.button:compose-pay-button:1.1.0")
 }
 ```
 
-##### 2. **Create the Button and handle the payment**
+Detailed integration guides cover configuration, SDK usage, backend mapping, session handling and test results for each flow:
 
-In your Activity, set up the Google Pay button and handle the payment as shown below:
+- [Google Pay Standard Checkout](GOOGLE_PAY_STANDARD.md): shop-selected delivery, final-price request and backend submission after the Google Pay result.
+- [Google Pay Express Checkout](GOOGLE_PAY_EXPRESS.md): native shipping/authorization callbacks, dynamic totals and callback-service registration.
 
-```kotlin
-import com.google.android.gms.wallet.AutoResolveHelper
-import com.google.android.gms.wallet.PaymentsClient
-import com.google.android.gms.wallet.Wallet
-import com.google.android.gms.wallet.WalletConstants
-import com.payone.pcpclientandroiddemo.gpay.GooglePayRequestJson
-import androidx.compose.ui.platform.ComposeView
+Open **Backend URL** in the demo main menu, enter your API base URL and tap **Save** before opening either Google Pay page. The setting is saved across app restarts and shared by Standard and Express; no rebuild is needed. **Use default** restores `http://localhost:3009/api/`. A running checkout retains the URL with which it started.
 
-class MainActivity : AppCompatActivity() {
-    private lateinit var paymentsClient: PaymentsClient
-    private val LOAD_PAYMENT_DATA_REQUEST_CODE = 991
+| Environment | Example backend URL | Setup |
+| --- | --- | --- |
+| Phone on the same Wi-Fi as the computer | `http://192.168.178.42:4000/api/` | Replace the IP/port with yours. Bind the backend to `0.0.0.0` or its LAN address and allow its port through the firewall. No USB forwarding needed. |
+| Android Studio emulator | `http://10.0.2.2:4000/api/` | The emulator host alias reaches the computer. No USB forwarding needed. |
+| Hosted backend or HTTPS tunnel | `https://demo.example.com/api/` | Use an address reachable from the device. |
+| USB with localhost | `http://localhost:4000/api/` | Run `adb reverse tcp:4000 tcp:4000` for the connected device. |
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
+On a phone, `localhost` means the phone itself. The demo permits local HTTP connections to configurable hosts; use HTTPS for hosted environments. Include the API path in the URL: `/api/` and port `3009` are defaults, not requirements. The client appends `commerce-cases` to this base; merchant discovery uses `GET /ui/config` at the same origin, outside the API prefix. See the [Standard URL/routing examples](GOOGLE_PAY_STANDARD.md#set-your-backend-url-before-starting-the-page) and [Express configuration](GOOGLE_PAY_EXPRESS.md#backend-url-before-starting-the-checkout).
 
-        // Set up Google Pay PaymentsClient
-        paymentsClient = Wallet.getPaymentsClient(
-            this,
-            Wallet.WalletOptions.Builder()
-                .setEnvironment(WalletConstants.ENVIRONMENT_TEST)
-                .build()
-        )
+The pages are thin mode selectors over a shared implementation:
 
-        val composeView = findViewById<ComposeView>(R.id.compose_google_pay)
-        composeView.setContent {
-            val startPayment = remember { mutableStateOf(false) }
-            if (startPayment.value) {
-                startPayment.value = false
-                launchGooglePay()
-            }
-            GooglePayButton(onClick = { startPayment.value = true })
-        }
-    }
+- [Standard page](app/src/main/java/com/payone/pcpclientandroiddemo/GooglePayActivity.kt)
+- [Express page](app/src/main/java/com/payone/pcpclientandroiddemo/gpay/express/GooglePayExpressActivity.kt)
+- [Shared UI](app/src/main/java/com/payone/pcpclientandroiddemo/gpay/checkout/GooglePayCheckoutActivity.kt), [configuration](app/src/main/java/com/payone/pcpclientandroiddemo/gpay/checkout/CheckoutConfig.kt), [backend](app/src/main/java/com/payone/pcpclientandroiddemo/gpay/checkout/CheckoutBackend.kt)
 
-    private fun launchGooglePay() {
-        val paymentDataRequestJson = GooglePayRequestJson.getRequestJson(
-            merchantId = "your-merchant-id",
-            merchantName = "Your Merchant Name",
-            totalPrice = "100.00"
-        )
-        val request = com.google.android.gms.wallet.PaymentDataRequest.fromJson(paymentDataRequestJson)
-        AutoResolveHelper.resolveTask(
-            paymentsClient.loadPaymentData(request),
-            this,
-            LOAD_PAYMENT_DATA_REQUEST_CODE
-        )
-    }
+### Google Pay Express
 
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == LOAD_PAYMENT_DATA_REQUEST_CODE) {
-            handleGooglePayResult(resultCode, data)
-        }
-    }
+Native Express shipping/authorization callbacks use Wallet **20.0.0**. Register the [callback service](app/src/main/java/com/payone/pcpclientandroiddemo/gpay/express/ExpressPaymentService.kt) as described in the [guide](GOOGLE_PAY_EXPRESS.md#express-callback-service). No WebView is involved.
 
-    private fun handleGooglePayResult(resultCode: Int, data: Intent?) {
-        when (resultCode) {
-            Activity.RESULT_OK -> {
-                val paymentData = data?.let { com.google.android.gms.wallet.PaymentData.getFromIntent(it) }
-                if (paymentData != null) {
-                    // TODO: process paymentData
-                    Log.d("GooglePay", "Payment processed: \\${paymentData.toJson()}")
-                } else {
-                    Log.d("GooglePay", "Payment processed but paymentData is null")
-                }
-            }
-            Activity.RESULT_CANCELED -> {
-                Log.d("GooglePay", "Payment canceled by user")
-            }
-            AutoResolveHelper.RESULT_ERROR -> {
-                val status = AutoResolveHelper.getStatusFromIntent(data)
-                Log.e("GooglePay", "Payment error: \\${status?.statusMessage}")
-            }
-        }
-    }
-}
-```
+The demo defaults to `executePaymentOnCreation=false`: both pages create checkouts with Google Pay/product-320 payment data while deferring payment execution. See the guides for the required order reference (maximum 20 characters) and execution parameter.
 
-And the Compose Google Pay button:
-
-```kotlin
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import com.google.pay.button.ButtonTheme
-import com.google.pay.button.PayButton
-import com.payone.pcpclientandroiddemo.gpay.GooglePayRequestJson
-
-@Composable
-fun GooglePayButton(onClick: () -> Unit) {
-    val allowedPaymentMethods = GooglePayRequestJson.allowedPaymentMethods
-    Box(modifier = Modifier.fillMaxWidth()) {
-        PayButton(
-            onClick = onClick,
-            allowedPaymentMethods = allowedPaymentMethods,
-            theme = ButtonTheme.Dark
-        )
-    }
-}
-```
-
-> **Note:** Replace `your-merchant-id` and `Your Merchant Name` with your actual merchant details. Make sure your layout contains a `ComposeView` with the ID `compose_google_pay`.
+Wallet 20 removes `AutoResolveHelper.resolveTask`; use `TaskResultContracts.GetPaymentDataResult` and launch only after the payment Task completes. Never log payment tokens or full payment/address JSON.
 
 **[back to top](#table-of-contents)**
 

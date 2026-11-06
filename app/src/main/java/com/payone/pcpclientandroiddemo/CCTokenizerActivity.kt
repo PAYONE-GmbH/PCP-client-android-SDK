@@ -173,6 +173,8 @@ class CCTokenizerActivity : BaseActivity() {
         headerTitle = "CC Tokenizer"
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_cc_tokenizer)
+        (supportFragmentManager.findFragmentById(R.id.fragment_container) as? CreditcardTokenizerFragment)
+            ?.setTokenizationCallbacks(config.tokenizationSuccessCallback, config.tokenizationFailureCallback)
 
         if (supportFragmentManager.backStackEntryCount > 0 || !isTaskRoot) {
             supportActionBar?.setDisplayHomeAsUpEnabled(true)
