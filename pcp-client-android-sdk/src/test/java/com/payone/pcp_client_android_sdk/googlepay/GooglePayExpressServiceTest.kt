@@ -77,7 +77,7 @@ class GooglePayExpressServiceTest {
     @Test fun invalidPaymentNeverReachesBackend() {
         val service = Service()
         var response: PaymentAuthorizationResult? = null
-        service.callbacks().authorize(PaymentData.fromJson("{}")) { response = it }
+        service.callbacks().authorize(PaymentData.fromJson("""{"secret":"private-token-and-contact"}""")) { response = it }
         assertEquals("ERROR", state(requireNotNull(response)))
         assertEquals(0, service.calls)
     }

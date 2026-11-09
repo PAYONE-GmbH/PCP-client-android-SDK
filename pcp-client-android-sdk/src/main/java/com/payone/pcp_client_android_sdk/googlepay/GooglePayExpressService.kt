@@ -35,7 +35,8 @@ abstract class GooglePayExpressService : BasePaymentDataCallbacksService() {
         override fun onPaymentAuthorized(request: PaymentData?, listener: OnCompleteListener<PaymentAuthorizationResult>) {
             completeWithinDeadline(listener, { authorizationResult(false) }) {
                 val data = requireNotNull(request)
-                onAuthorize(GooglePayExpressPayment.fromJson(requireNotNull(data.toJson())), data.lastSavedState)
+                val payment = GooglePayExpressPayment.fromJson(requireNotNull(data.toJson()))
+                onAuthorize(payment, data.lastSavedState)
                     .continueWith(Executor { it.run() }) { task ->
                         authorizationResult(task.isSuccessful && task.result == true)
                     }
@@ -49,7 +50,9 @@ abstract class GooglePayExpressService : BasePaymentDataCallbacksService() {
         fun complete(value: T) {
             if (completed.compareAndSet(false, true)) listener.complete(value)
         }
-        val timeout = Runnable { complete(failure()) }
+        val timeout = Runnable {
+            complete(failure())
+        }
         handler.postDelayed(timeout, 25_000)
         try {
             start().addOnCompleteListener(Executor { it.run() }) { task ->

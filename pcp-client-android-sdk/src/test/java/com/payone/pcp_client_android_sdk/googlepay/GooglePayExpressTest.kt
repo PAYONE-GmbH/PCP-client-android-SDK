@@ -7,6 +7,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import kotlin.io.encoding.Base64
 
 internal const val PAYMENT = """{"email":"buyer@example.test","shippingAddress":{"name":"Ada Lovelace","countryCode":"DE","postalCode":"10115","locality":"Berlin","address1":"Teststrasse 1"},"shippingOptionData":{"id":"standard"},"paymentMethodData":{"type":"CARD","info":{"billingAddress":{"name":"Ada Lovelace","countryCode":"DE","postalCode":"10115","locality":"Berlin","address1":"Teststrasse 1"}},"tokenizationData":{"type":"PAYMENT_GATEWAY","token":"fixture-token"}}}"""
 
@@ -32,9 +33,14 @@ class GooglePayExpressTest {
 
     @Test fun tokenIsPreservedExactlyAndMappedToProduct320() {
         val root = JsonParser.parseString(validPayment()).asJsonObject
+        val token = "{\"signedMessage\":\"ä +/== ${"x".repeat(120)}\"}"
+        root.getAsJsonObject("paymentMethodData").getAsJsonObject("tokenizationData").addProperty("token", token)
         val payment = GooglePayExpressPayment.fromJson(root.toString())
         val input = JsonParser.parseString(payment.mobilePaymentMethodSpecificInputJson()).asJsonObject
-        assertEquals(root.getAsJsonObject("paymentMethodData").getAsJsonObject("tokenizationData").get("token").asString, input.get("encryptedPaymentData").asString)
+        assertEquals(token, payment.encryptedPaymentData)
+        val encoded = input.get("encryptedPaymentData").asString
+        assertEquals(token, Base64.decode(encoded).toString(Charsets.UTF_8))
+        assertFalse(encoded.contains('\n'))
         assertEquals(320, input.get("paymentProductId").asInt)
         assertEquals("PRE_AUTHORIZATION", input.get("authorizationMode").asString)
         assertFalse(payment.toString().contains("opaque"))

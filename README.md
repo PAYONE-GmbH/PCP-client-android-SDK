@@ -476,7 +476,16 @@ Detailed integration guides cover configuration, SDK usage, backend mapping, ses
 - [Google Pay Standard Checkout](GOOGLE_PAY_STANDARD.md): shop-selected delivery, final-price request and backend submission after the Google Pay result.
 - [Google Pay Express Checkout](GOOGLE_PAY_EXPRESS.md): native shipping/authorization callbacks, dynamic totals and callback-service registration.
 
-Open **Backend URL** in the demo main menu, enter your API base URL and tap **Save** before opening either Google Pay page. The setting is saved across app restarts and shared by Standard and Express; no rebuild is needed. **Use default** restores `http://localhost:3009/api/`. A running checkout retains the URL with which it started.
+Add the API base URL and public PAYONE merchant ID to `app/local.properties` (create it if needed):
+
+```properties
+checkout.backendBaseUrl=http://localhost:3000/api/
+checkout.gatewayMerchantId=your-public-payone-merchant-id
+```
+
+Rebuild with `./gradlew :app:installDebug` after changing the file. Gradle compiles these public defaults into the demo app through `BuildConfig`; `app/local.properties` is ignored by Git. The repository-root `local.properties` remains the location for `sdk.dir`. Keep API keys and secrets on the server.
+
+**Checkout settings** in the main menu shows these defaults and lets you override them on the device. Saved values take precedence; **Clear settings** restores the build defaults. Both values are required before opening either Google Pay page. Without local defaults, configure them on the device. A running attempt retains its original configuration.
 
 | Environment | Example backend URL | Setup |
 | --- | --- | --- |
@@ -485,19 +494,19 @@ Open **Backend URL** in the demo main menu, enter your API base URL and tap **Sa
 | Hosted backend or HTTPS tunnel | `https://demo.example.com/api/` | Use an address reachable from the device. |
 | USB with localhost | `http://localhost:4000/api/` | Run `adb reverse tcp:4000 tcp:4000` for the connected device. |
 
-On a phone, `localhost` means the phone itself. The demo permits local HTTP connections to configurable hosts; use HTTPS for hosted environments. Include the API path in the URL: `/api/` and port `3009` are defaults, not requirements. The client appends `commerce-cases` to this base; merchant discovery uses `GET /ui/config` at the same origin, outside the API prefix. See the [Standard URL/routing examples](GOOGLE_PAY_STANDARD.md#set-your-backend-url-before-starting-the-page) and [Express configuration](GOOGLE_PAY_EXPRESS.md#backend-url-before-starting-the-checkout).
+On a phone, `localhost` means the phone itself. Include your deployment's API path in the URL. The client preserves that prefix for creation and status lookup. Merchant ID is configured directly; server credentials remain on the server.
 
-The pages are thin mode selectors over a shared implementation:
+Each page shows its direct payment flow:
 
 - [Standard page](app/src/main/java/com/payone/pcpclientandroiddemo/GooglePayActivity.kt)
 - [Express page](app/src/main/java/com/payone/pcpclientandroiddemo/gpay/express/GooglePayExpressActivity.kt)
-- [Shared UI](app/src/main/java/com/payone/pcpclientandroiddemo/gpay/checkout/GooglePayCheckoutActivity.kt), [configuration](app/src/main/java/com/payone/pcpclientandroiddemo/gpay/checkout/CheckoutConfig.kt), [backend](app/src/main/java/com/payone/pcpclientandroiddemo/gpay/checkout/CheckoutBackend.kt)
+- [Configuration](app/src/main/java/com/payone/pcpclientandroiddemo/gpay/ConfigService.kt), [API service](app/src/main/java/com/payone/pcpclientandroiddemo/gpay/CommerceApiService.kt), [attempt store](app/src/main/java/com/payone/pcpclientandroiddemo/gpay/PaymentAttemptStore.kt)
 
 ### Google Pay Express
 
 Native Express shipping/authorization callbacks use Wallet **20.0.0**. Register the [callback service](app/src/main/java/com/payone/pcpclientandroiddemo/gpay/express/ExpressPaymentService.kt) as described in the [guide](GOOGLE_PAY_EXPRESS.md#express-callback-service). No WebView is involved.
 
-The demo defaults to `executePaymentOnCreation=false`: both pages create checkouts with Google Pay/product-320 payment data while deferring payment execution. See the guides for the required order reference (maximum 20 characters) and execution parameter.
+Both samples use an itemized FULL order, product 320, SALE and `autoExecuteOrder=true`. Item: 19.90 EUR; delivery: 4.90/9.90 EUR. Standard uses merchant-form contacts; Express uses wallet contacts. Unresolved submissions block another order until backend reconciliation.
 
 Wallet 20 removes `AutoResolveHelper.resolveTask`; use `TaskResultContracts.GetPaymentDataResult` and launch only after the payment Task completes. Never log payment tokens or full payment/address JSON.
 

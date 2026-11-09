@@ -1,6 +1,10 @@
 package com.payone.pcpclientandroiddemo
 
 import android.os.Bundle
+import android.os.Build
+import android.content.pm.PackageManager
+import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import android.view.View
 import androidx.core.view.ViewCompat
@@ -8,6 +12,26 @@ import androidx.core.view.WindowInsetsCompat
 
 open class BaseActivity : AppCompatActivity() {
     var headerTitle: String? = null
+    private var checkoutAction: (() -> Unit)? = null
+    private val networkPermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        val action = checkoutAction
+        checkoutAction = null
+        if (granted) {
+            action?.invoke()
+        } else {
+            Toast.makeText(this, "Local network access is required for your development backend. Allow Nearby devices in app permissions, then retry.", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    /** Android 17 gates LAN sockets separately from INTERNET, including native Wallet services. */
+    protected fun withCheckoutNetworkAccess(action: () -> Unit) {
+        if (Build.VERSION.SDK_INT >= 37 && checkSelfPermission("android.permission.ACCESS_LOCAL_NETWORK") != PackageManager.PERMISSION_GRANTED) {
+            checkoutAction = action
+            networkPermission.launch("android.permission.ACCESS_LOCAL_NETWORK")
+        } else {
+            action()
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
