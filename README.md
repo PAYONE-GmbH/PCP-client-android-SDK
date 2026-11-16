@@ -47,7 +47,17 @@ Welcome to the PAYONE Commerce Platform Client Android SDK for the PAYONE Commer
 
 ## Supported Android API Version
 
-In order to use the SDK your minimum SDK Version needs to be at least API 34.
+The SDK minimum is **Android 7.0 (API 24)**. The current source builds with
+**Android 17 (API 37)**; the demo targets API 37. `compileSdk` is not a maximum
+supported Android version, and the integrating app controls `targetSdk`.
+
+Card tokenization and fingerprinting require a working, updated Android System
+WebView. Google Pay additionally requires compatible Google Play services and
+Google Pay availability for the device, account and merchant.
+
+Use **Oracle JDK 27** to build and run this repository's complete test suite. See
+[Android support and verification](ANDROID_SUPPORT.md) for the tested API
+matrix, build commands and integration requirements.
 
 ## Features
 
@@ -172,7 +182,7 @@ To integrate the Credit Card Tokenizer feature into your Android application, fo
 
 #### 1. Add the HTML page
 
-Host your HTML page locally (for development) or on a server. The page must contain the payment IFrame and submit button:
+Provide your HTML as an app asset, an HTML string or a hosted page. No separate website is needed for the first two options. The page must contain the payment IFrame and submit button:
 
 ```html
 <div id="payment-IFrame"></div> <button id="submit">Submit</button>
@@ -216,8 +226,9 @@ val config = CreditcardTokenizerConfig(
         selector = "#submit",
         element = null
     ),
-    environment = "test", // Use "live" for production
-    tokenizationSuccessCallback = { statusCode, token, cardDetails ->
+    mode = "test", // Use "live" for production
+    token = merchantToken, // Fetch from your backend before creating the configuration
+    tokenizationSuccessCallback = { statusCode, token, cardDetails, inputMode ->
         Log.d("CC Success", "Tokenized card successfully")
         Log.d("CC Success", "Status: $statusCode")
         Log.d("CC Success", "Token: $token")
@@ -236,10 +247,62 @@ val config = CreditcardTokenizerConfig(
 You must fetch the JWT from your backend before initializing the SDK.
 
 ```kotlin
-val token = fetchJwtFromBackend() // Implement this in your backend
+val merchantToken = fetchJwtFromBackend() // Fetch before creating config above
 ```
 
 #### 5. Host and load the HTML page
+
+Choose one of these HTML sources. The configuration, submit-button handling and tokenization callbacks are the same for all three.
+
+##### Bundled HTML (no web server)
+
+Place your page in `app/src/main/assets/creditcard-tokenizer.html` and load it with:
+
+```kotlin
+val fragment = CreditcardTokenizerFragment.newInstanceWithAsset(
+    config = config,
+    assetPath = "creditcard-tokenizer.html",
+    localHTMLBaseURL = "https://your-merchant.example/checkout/",
+)
+```
+
+The demo uses its bundled [example HTML](app/src/main/assets/creditcard-tokenizer-example.html). Set `localHTMLBaseURL` in `CCTokenizerActivity` to your merchant's HTTPS origin. Enter a current merchant token in the screen's input field and tap **Start Credit Card Tokenization**. The **Tokenizer status and result** panel shows script/form initialization, submission progress, error responses and the returned token/card details. The demo displays results on screen rather than logging tokens to Logcat.
+
+For your own UI, set `fragment.onStatusChanged = { message -> /* update status */ }` before adding the Fragment and reattach it after Activity recreation. Progress callbacks run on the main thread; tokenization results continue to use the configured success/failure callbacks.
+
+The demo Activity also accepts an optional merchant token when opened:
+
+```kotlin
+startActivity(CCTokenizerActivity.createIntent(this, merchantToken = merchantToken))
+```
+
+A nonblank token pre-fills the input and loads the form automatically on first launch. Without a token, the user enters it manually. The input remains available to load a replacement token. An equivalent explicit Intent can use `putExtra(CCTokenizerActivity.EXTRA_MERCHANT_TOKEN, merchantToken)`. Activity recreation retains the existing Fragment instead of automatically starting a second tokenizer. In SDK integrations, supply the token directly through `CreditcardTokenizerConfig(token = merchantToken, ...)`; the Activity helper belongs to the demo app.
+
+##### HTML string (no web server)
+
+```kotlin
+val fragment = CreditcardTokenizerFragment.newInstanceWithHtml(
+    config = config,
+    html = """
+        <!DOCTYPE html>
+        <html><head>
+          <meta name="viewport" content="width=device-width, initial-scale=1">
+        </head><body>
+          <div id="payment-IFrame"></div>
+          <button id="submit" type="button">Submit</button>
+        </body></html>
+    """.trimIndent(),
+    localHTMLBaseURL = "https://your-merchant.example/checkout/",
+)
+```
+
+Both local variants use `WebView.loadDataWithBaseURL`. The HTTPS base URL supplies the document origin and resolves relative resource URLs; the SDK neither uploads the HTML nor requests an HTML page from that URL. Use a merchant-controlled origin that matches your PAYONE integration. A `file://` or `data:` origin can be rejected by the hosted form's framing policy, so local HTML requires an HTTPS URL with a host. Invalid base URLs are rejected with `IllegalArgumentException`; unreadable assets call the failure callback with status `500` and `error = LocalHTMLLoadingFailed`.
+
+Include CSS inline, or reference reachable HTTPS assets. Relative images, styles and scripts resolve against the HTTPS base URL, not the Android asset directory. The SDK injects PAYONE's hosted script and connects the configured submit button; do not initialize a second Hosted SDK instance in the page. Tokenization still uses PAYONE's online script and form. Keep HTML strings small because Fragment arguments are saved with Activity state; prefer assets for larger pages. After process restoration, rebind callbacks using `setTokenizationCallbacks` as described in [Android support](ANDROID_SUPPORT.md).
+
+##### Hosted HTML
+
+The existing `newInstance(config, tokenizerHtmlUrl)` API continues to load a remote page. For HTTPS hosting, use the initialization example below.
 
 For local development, host your HTML file using a local server (e.g. `http-server` or similar). Use your computer's IP address or emulator's special address:
 
@@ -291,6 +354,8 @@ android:networkSecurityConfig="@xml/network_security_config"
    - Only use this config for development. In production, always use HTTPS and remove the `network_security_config.xml` reference from your manifest.
 
 #### 6. Initialize the Tokenizer
+
+Add the Fragment from any of the variants above to your container. For an existing hosted page:
 
 ```kotlin
 val fragment = CreditcardTokenizerFragment.newInstance(
@@ -445,134 +510,60 @@ For further information see: https://docs.payone.com/pcp/commerce-platform-payme
 
 ### Google Pay Integration
 
-The PAYONE Commerce Platform Client Android SDK provides a demonstration project for Google Pay integration. The integration uses the official Google Pay Button libraries which are available for various frameworks:
+The SDK supports native **Standard Checkout** and **Express Checkout** with separate demo pages and the official Compose Google Pay button:
 
-- Compose ([@google-pay/compose-pay-button](https://github.com/google-pay/compose-pay-button))
+- **Google Pay Standard Checkout:** select delivery on the checkout page; Google Pay returns the payment data, then the backend creates the checkout with Google Pay.
+- **Google Pay Express Checkout:** select address/delivery in the Google Pay sheet; native callbacks update prices and create the checkout with Google Pay before the sheet reports success.
 
-Our demo implementation uses this library.
+Both flows use a Google Pay token and PAYONE payment product **320**.
 
-#### Setup Google Pay Integration (Compose Example)
-
-##### 1. **Install Dependencies**
-
-Add the following dependencies to your `build.gradle.kts`:
+Wallet is exposed by the SDK; the demo additionally uses the official button:
 
 ```kotlin
 dependencies {
-    implementation("com.google.android.gms:play-services-wallet:19.2.1")
-    implementation("com.google.pay.button:compose-pay-button:1.2.0")
-    // ...other dependencies
+    implementation("com.google.android.gms:play-services-wallet:20.0.0")
+    implementation("com.google.pay.button:compose-pay-button:1.1.0")
 }
 ```
 
-##### 2. **Create the Button and handle the payment**
+Detailed integration guides cover configuration, SDK usage, backend mapping, session handling and test results for each flow:
 
-In your Activity, set up the Google Pay button and handle the payment as shown below:
+- [Google Pay Standard Checkout](GOOGLE_PAY_STANDARD.md): shop-selected delivery, final-price request and backend submission after the Google Pay result.
+- [Google Pay Express Checkout](GOOGLE_PAY_EXPRESS.md): native shipping/authorization callbacks, dynamic totals and callback-service registration.
 
-```kotlin
-import com.google.android.gms.wallet.AutoResolveHelper
-import com.google.android.gms.wallet.PaymentsClient
-import com.google.android.gms.wallet.Wallet
-import com.google.android.gms.wallet.WalletConstants
-import com.payone.pcpclientandroiddemo.gpay.GooglePayRequestJson
-import androidx.compose.ui.platform.ComposeView
+Add the API base URL and public PAYONE merchant ID to `app/local.properties` (create it if needed):
 
-class MainActivity : AppCompatActivity() {
-    private lateinit var paymentsClient: PaymentsClient
-    private val LOAD_PAYMENT_DATA_REQUEST_CODE = 991
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
-
-        // Set up Google Pay PaymentsClient
-        paymentsClient = Wallet.getPaymentsClient(
-            this,
-            Wallet.WalletOptions.Builder()
-                .setEnvironment(WalletConstants.ENVIRONMENT_TEST)
-                .build()
-        )
-
-        val composeView = findViewById<ComposeView>(R.id.compose_google_pay)
-        composeView.setContent {
-            val startPayment = remember { mutableStateOf(false) }
-            if (startPayment.value) {
-                startPayment.value = false
-                launchGooglePay()
-            }
-            GooglePayButton(onClick = { startPayment.value = true })
-        }
-    }
-
-    private fun launchGooglePay() {
-        val paymentDataRequestJson = GooglePayRequestJson.getRequestJson(
-            merchantId = "your-merchant-id",
-            merchantName = "Your Merchant Name",
-            totalPrice = "100.00"
-        )
-        val request = com.google.android.gms.wallet.PaymentDataRequest.fromJson(paymentDataRequestJson)
-        AutoResolveHelper.resolveTask(
-            paymentsClient.loadPaymentData(request),
-            this,
-            LOAD_PAYMENT_DATA_REQUEST_CODE
-        )
-    }
-
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == LOAD_PAYMENT_DATA_REQUEST_CODE) {
-            handleGooglePayResult(resultCode, data)
-        }
-    }
-
-    private fun handleGooglePayResult(resultCode: Int, data: Intent?) {
-        when (resultCode) {
-            Activity.RESULT_OK -> {
-                val paymentData = data?.let { com.google.android.gms.wallet.PaymentData.getFromIntent(it) }
-                if (paymentData != null) {
-                    // TODO: process paymentData
-                    Log.d("GooglePay", "Payment processed: \\${paymentData.toJson()}")
-                } else {
-                    Log.d("GooglePay", "Payment processed but paymentData is null")
-                }
-            }
-            Activity.RESULT_CANCELED -> {
-                Log.d("GooglePay", "Payment canceled by user")
-            }
-            AutoResolveHelper.RESULT_ERROR -> {
-                val status = AutoResolveHelper.getStatusFromIntent(data)
-                Log.e("GooglePay", "Payment error: \\${status?.statusMessage}")
-            }
-        }
-    }
-}
+```properties
+checkout.backendBaseUrl=http://localhost:3000/api/
+checkout.gatewayMerchantId=your-public-payone-merchant-id
 ```
 
-And the Compose Google Pay button:
+Rebuild with `./gradlew :app:installDebug` after changing the file. Gradle compiles these public defaults into the demo app through `BuildConfig`; `app/local.properties` is ignored by Git. The repository-root `local.properties` remains the location for `sdk.dir`. Keep API keys and secrets on the server.
 
-```kotlin
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import com.google.pay.button.ButtonTheme
-import com.google.pay.button.PayButton
-import com.payone.pcpclientandroiddemo.gpay.GooglePayRequestJson
+**Checkout settings** in the main menu shows these defaults and lets you override them on the device. Saved values take precedence; **Clear settings** restores the build defaults. Both values are required before opening either Google Pay page. Without local defaults, configure them on the device. A running attempt retains its original configuration.
 
-@Composable
-fun GooglePayButton(onClick: () -> Unit) {
-    val allowedPaymentMethods = GooglePayRequestJson.allowedPaymentMethods
-    Box(modifier = Modifier.fillMaxWidth()) {
-        PayButton(
-            onClick = onClick,
-            allowedPaymentMethods = allowedPaymentMethods,
-            theme = ButtonTheme.Dark
-        )
-    }
-}
-```
+| Environment | Example backend URL | Setup |
+| --- | --- | --- |
+| Phone on the same Wi-Fi as the computer | `http://192.168.178.42:4000/api/` | Replace the IP/port with yours. Bind the backend to `0.0.0.0` or its LAN address and allow its port through the firewall. No USB forwarding needed. |
+| Android Studio emulator | `http://10.0.2.2:4000/api/` | The emulator host alias reaches the computer. No USB forwarding needed. |
+| Hosted backend or HTTPS tunnel | `https://demo.example.com/api/` | Use an address reachable from the device. |
+| USB with localhost | `http://localhost:4000/api/` | Run `adb reverse tcp:4000 tcp:4000` for the connected device. |
 
-> **Note:** Replace `your-merchant-id` and `Your Merchant Name` with your actual merchant details. Make sure your layout contains a `ComposeView` with the ID `compose_google_pay`.
+On a phone, `localhost` means the phone itself. Include your deployment's API path in the URL. The client preserves that prefix for creation and status lookup. Merchant ID is configured directly; server credentials remain on the server.
+
+Each page shows its direct payment flow:
+
+- [Standard page](app/src/main/java/com/payone/pcpclientandroiddemo/GooglePayActivity.kt)
+- [Express page](app/src/main/java/com/payone/pcpclientandroiddemo/gpay/express/GooglePayExpressActivity.kt)
+- [Configuration](app/src/main/java/com/payone/pcpclientandroiddemo/gpay/ConfigService.kt), [API service](app/src/main/java/com/payone/pcpclientandroiddemo/gpay/CommerceApiService.kt), [attempt store](app/src/main/java/com/payone/pcpclientandroiddemo/gpay/PaymentAttemptStore.kt)
+
+### Google Pay Express
+
+Native Express shipping/authorization callbacks use Wallet **20.0.0**. Register the [callback service](app/src/main/java/com/payone/pcpclientandroiddemo/gpay/express/ExpressPaymentService.kt) as described in the [guide](GOOGLE_PAY_EXPRESS.md#express-callback-service). No WebView is involved.
+
+Both samples use an itemized FULL order, product 320, SALE and `autoExecuteOrder=true`. Item: 19.90 EUR; delivery: 4.90/9.90 EUR. Standard uses merchant-form contacts; Express uses wallet contacts. Unresolved submissions block another order until backend reconciliation.
+
+Wallet 20 removes `AutoResolveHelper.resolveTask`; use `TaskResultContracts.GetPaymentDataResult` and launch only after the payment Task completes. Never log payment tokens or full payment/address JSON.
 
 **[back to top](#table-of-contents)**
 

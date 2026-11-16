@@ -3,6 +3,7 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_LOCAL_NETWORK" />
 
     <application android:allowBackup="true" android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules" android:enableOnBackInvokedCallback="true"
@@ -31,6 +32,15 @@
         <activity android:name=".FingerprintActivity" android:exported="true" />
         <activity android:name=".CCTokenizerActivity" android:exported="true" />
         <activity android:name=".GooglePayActivity" android:exported="true" />
+        <activity android:name=".gpay.express.GooglePayExpressActivity" android:exported="false" />
+        <meta-data android:name="com.google.android.gms.wallet.api.enabled" android:value="true" />
+        <service android:name=".gpay.express.ExpressPaymentService"
+            android:permission="com.google.android.gms.permission.BIND_PAYMENTS_CALLBACK_SERVICE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.google.android.gms.wallet.callback.PAYMENT_DATA_CALLBACKS" />
+            </intent-filter>
+        </service>
 
     </application>
 
