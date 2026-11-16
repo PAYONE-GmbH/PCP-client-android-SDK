@@ -68,7 +68,7 @@ matrix, build commands and integration requirements.
 
 ```kotlin
 dependencies {
-    implementation("io.github.payone-gmbh:pcp-client-android-sdk:1.4.0")
+    implementation("io.github.payone-gmbh:pcp-client-android-sdk:1.5.0")
 }
 ```
 
