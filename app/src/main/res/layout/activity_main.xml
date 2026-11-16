@@ -1,10 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 
 
-<LinearLayout
+<ScrollView
     xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:fillViewport="true">
+<LinearLayout
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
     android:orientation="vertical"
     android:padding="16dp">
 
@@ -37,8 +41,15 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="24dp"
-        android:text="Start Google Pay" />
+        android:text="Google Pay Standard Checkout" />
 
+
+    <Button
+        android:id="@+id/btnGooglePayExpress"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:text="Google Pay Express Checkout" />
 
     <Button
         android:id="@+id/btnPayPal"
@@ -47,4 +58,11 @@
         android:layout_marginTop="24dp"
         android:text="Start Paypal" />
 
+    <Button
+        android:id="@+id/btnBackendSettings"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="24dp"
+        android:text="@string/backend_settings_title" />
 </LinearLayout>
+</ScrollView>

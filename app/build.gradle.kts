@@ -1,20 +1,32 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
-    alias(libs.plugins.jetbrains.kotlin.android)
-    alias(libs.plugins.jetbrainsCompose)
     alias(libs.plugins.compose.compiler)
 }
 
+// Optional public checkout defaults local to the demo app module.
+val checkoutProperties = Properties().apply {
+    providers.fileContents(layout.projectDirectory.file("local.properties"))
+        .asText.orElse("").get().reader().use { load(it) }
+}
+
+fun checkoutDefault(key: String): String = "\"" + checkoutProperties.getProperty(key, "").trim()
+    .replace("\\", "\\\\").replace("\"", "\\\"")
+    .replace("\n", "\\n").replace("\r", "\\r") + "\""
+
 android {
     namespace = "com.payone.pcpclientandroiddemo"
-    compileSdk = 35
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "com.payone.pcpclientandroiddemo"
         minSdk = 24
-        targetSdk = 35
+        targetSdk = 37
         versionCode = 1
         versionName = "1.0"
+        buildConfigField("String", "BACKEND_BASE_URL", checkoutDefault("checkout.backendBaseUrl"))
+        buildConfigField("String", "GATEWAY_MERCHANT_ID", checkoutDefault("checkout.gatewayMerchantId"))
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -24,23 +36,26 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            // This module is a runnable integration demo, not a store artifact.
+            signingConfig = signingConfigs.getByName("debug")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            if (providers.gradleProperty("androidTestBuildType").orNull == "release") {
+                proguardFile("proguard-instrumentation.pro")
+            }
         }
     }
+    testBuildType = providers.gradleProperty("androidTestBuildType").orElse("debug").get()
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_1_8
         targetCompatibility = JavaVersion.VERSION_1_8
     }
-    kotlin {
-        compilerOptions {
-            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_1_8)
-        }
-    }
+    testOptions.unitTests.isIncludeAndroidResources = true
     buildFeatures {
+        buildConfig = true
         compose = true
     }
     packaging {
@@ -50,7 +65,15 @@ android {
     }
 }
 
+kotlin.compilerOptions.jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_1_8)
+
+// Robolectric API 37 accesses FileDescriptor internals on the JDK 27 test worker.
+tasks.withType<Test>().configureEach {
+    jvmArgs("--add-exports=java.base/jdk.internal.access=ALL-UNNAMED")
+}
+
 dependencies {
+    implementation("com.google.code.gson:gson:2.11.0")
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
@@ -60,16 +83,21 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
-    implementation("androidx.appcompat:appcompat:1.6.1")
+    implementation(libs.androidx.appcompat)
     implementation(project(":pcp-client-android-sdk"))
     implementation(libs.androidx.constraintlayout)
     implementation("com.google.pay.button:compose-pay-button:1.1.0")
-    implementation("com.google.android.gms:play-services-wallet:19.3.0")
+    implementation(libs.google.wallet)
     implementation("com.paypal.android:paypal-web-payments:2.0.1")
     implementation("com.paypal.android:payment-buttons:2.0.1")
 
     testImplementation(libs.junit)
+    testImplementation("com.squareup.okhttp3:mockwebserver:4.12.0")
+    testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.test.core)
     androidTestImplementation(libs.androidx.junit)
+    androidTestImplementation(libs.androidx.test.core)
+    androidTestImplementation(libs.androidx.runner)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.ui.test.junit4)
