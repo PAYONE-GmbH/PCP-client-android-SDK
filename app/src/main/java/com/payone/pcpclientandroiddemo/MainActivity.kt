@@ -11,7 +11,7 @@ import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
-import com.payone.pcpclientandroiddemo.gpay.checkout.BackendSettings
+import com.payone.pcpclientandroiddemo.gpay.ConfigService
 
 
 class MainActivity : BaseActivity() {
@@ -46,13 +46,18 @@ class MainActivity : BaseActivity() {
     }
 
     private fun showBackendSettings() {
-        val settings = BackendSettings(this)
+        val prefs = getSharedPreferences("demo-backend", MODE_PRIVATE)
         val input = EditText(this).apply {
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI
             setSingleLine(true)
             hint = getString(R.string.backend_url_hint)
-            setText(settings.configuration().backendUrl)
+            setText(prefs.getString("url", BuildConfig.BACKEND_BASE_URL))
             setSelectAllOnFocus(true)
+        }
+        val merchant = EditText(this).apply {
+            hint = "PAYONE merchant ID (public gatewayMerchantId)"
+            setSingleLine(true)
+            setText(prefs.getString("merchantId", BuildConfig.GATEWAY_MERCHANT_ID))
         }
         val padding = (20 * resources.displayMetrics.density).toInt()
         val content = LinearLayout(this).apply {
@@ -60,22 +65,24 @@ class MainActivity : BaseActivity() {
             setPadding(padding, padding, padding, padding)
             addView(TextView(this@MainActivity).apply { setText(R.string.backend_settings_help) })
             addView(input)
+            addView(merchant)
         }
         val dialog = AlertDialog.Builder(this)
-            .setTitle(R.string.backend_settings_title)
+            .setTitle("Checkout settings")
             .setView(ScrollView(this).apply { addView(content) })
             .setPositiveButton(R.string.backend_save, null)
             .setNegativeButton(android.R.string.cancel, null)
-            .setNeutralButton(R.string.backend_reset) { _, _ -> settings.reset() }
+            .setNeutralButton("Clear settings") { _, _ -> prefs.edit().clear().apply() }
             .create()
         dialog.setOnShowListener {
             dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
                 try {
-                    settings.save(input.text.toString())
+                    val config = ConfigService(input.text.toString(), merchant.text.toString().trim())
+                    check(prefs.edit().putString("url", config.backendUrl).putString("merchantId", config.gatewayMerchantId).commit())
                     Toast.makeText(this, R.string.backend_saved, Toast.LENGTH_SHORT).show()
                     dialog.dismiss()
-                } catch (_: IllegalArgumentException) {
-                    input.error = getString(R.string.backend_url_invalid)
+                } catch (error: IllegalArgumentException) {
+                    input.error = error.message
                 }
             }
         }

@@ -9,6 +9,7 @@ import com.google.gson.JsonParser
 import java.math.BigDecimal
 import java.util.Currency
 import java.util.Locale
+import kotlin.io.encoding.Base64
 
 /** Configuration uses the PAYONE merchant ID, not a Google web merchant ID. */
 class GooglePayExpressConfig(
@@ -93,12 +94,12 @@ class GooglePayExpressPayment private constructor(
     val billingAddressJson: String,
     val shippingOptionId: String,
 ) {
-    /** PAYONE product 320 input. Token contents are forwarded unchanged. */
+    /** PAYONE product 320 expects the complete original token encoded once as UTF-8/Base64. */
     fun mobilePaymentMethodSpecificInputJson(authorizationMode: String = "PRE_AUTHORIZATION"): String {
         require(authorizationMode in setOf("SALE", "PRE_AUTHORIZATION"))
         return Gson().toJson(mapOf(
             "paymentProductId" to 320, "authorizationMode" to authorizationMode,
-            "encryptedPaymentData" to encryptedPaymentData,
+            "encryptedPaymentData" to Base64.encode(encryptedPaymentData.toByteArray(Charsets.UTF_8)),
         ))
     }
 

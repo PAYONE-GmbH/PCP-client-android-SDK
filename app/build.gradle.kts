@@ -1,7 +1,19 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.compose.compiler)
 }
+
+// Optional public checkout defaults local to the demo app module.
+val checkoutProperties = Properties().apply {
+    providers.fileContents(layout.projectDirectory.file("local.properties"))
+        .asText.orElse("").get().reader().use { load(it) }
+}
+
+fun checkoutDefault(key: String): String = "\"" + checkoutProperties.getProperty(key, "").trim()
+    .replace("\\", "\\\\").replace("\"", "\\\"")
+    .replace("\n", "\\n").replace("\r", "\\r") + "\""
 
 android {
     namespace = "com.payone.pcpclientandroiddemo"
@@ -13,6 +25,8 @@ android {
         targetSdk = 37
         versionCode = 1
         versionName = "1.0"
+        buildConfigField("String", "BACKEND_BASE_URL", checkoutDefault("checkout.backendBaseUrl"))
+        buildConfigField("String", "GATEWAY_MERCHANT_ID", checkoutDefault("checkout.gatewayMerchantId"))
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -41,6 +55,7 @@ android {
     }
     testOptions.unitTests.isIncludeAndroidResources = true
     buildFeatures {
+        buildConfig = true
         compose = true
     }
     packaging {
@@ -51,6 +66,11 @@ android {
 }
 
 kotlin.compilerOptions.jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_1_8)
+
+// Robolectric API 37 accesses FileDescriptor internals on the JDK 27 test worker.
+tasks.withType<Test>().configureEach {
+    jvmArgs("--add-exports=java.base/jdk.internal.access=ALL-UNNAMED")
+}
 
 dependencies {
     implementation("com.google.code.gson:gson:2.11.0")
