@@ -23,8 +23,8 @@ jobs:
         with:
           packages: "platform-tools platforms;android-37.0 build-tools;36.0.0"
       - uses: gradle/actions/setup-gradle@v6
-      - name: Unit tests, API lint and minified integration build
-        run: ./gradlew testDebugUnitTest lintDebug assembleRelease assembleAndroidTest --console=plain
+      - name: Unit tests, API lint, documentation and minified integration build
+        run: ./gradlew testDebugUnitTest lintDebug assembleRelease assembleAndroidTest :pcp-client-android-sdk:dokkaJavadocJar --console=plain
       - uses: actions/upload-artifact@v7
         if: always()
         with:
