@@ -1,8 +1,12 @@
+import com.vanniktech.maven.publish.AndroidSingleVariantLibrary
+import com.vanniktech.maven.publish.JavadocJar
+
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.sonar)
     kotlin("plugin.serialization") version libs.versions.kotlin.get()
     alias(libs.plugins.maven.publish)
+    alias(libs.plugins.dokka)
 }
 
 android {
@@ -62,6 +66,13 @@ dependencies {
 }
 
 mavenPublishing {
+    // Use current Dokka rather than AGP's bundled legacy documentation generator.
+    configure(
+        AndroidSingleVariantLibrary(
+            javadocJar = JavadocJar.Dokka("dokkaGeneratePublicationHtml"),
+        )
+    )
+
     publishToMavenCentral()
 
     signAllPublications()
